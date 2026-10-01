@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SERVICE_NAME="datavis"
+SERVICE_USER="datavis"
+STATE_DIR="/var/lib/datavis"
+: "${SERVICE_CREATOR_RELEASE_ID:?Controller must set SERVICE_CREATOR_RELEASE_ID}"
+: "${SERVICE_CREATOR_ARTIFACT_SHA256:?Controller must set SERVICE_CREATOR_ARTIFACT_SHA256}"
+: "${SERVICE_CREATOR_ARTIFACT_DIR:?Controller must set SERVICE_CREATOR_ARTIFACT_DIR}"
+: "${SERVICE_CREATOR_ENV_FILE:?Controller must set SERVICE_CREATOR_ENV_FILE}"
+: "${SERVICE_CREATOR_DEPLOY_ROOT:?Controller must set SERVICE_CREATOR_DEPLOY_ROOT}"
+
+DEPLOY_ROOT="$SERVICE_CREATOR_DEPLOY_ROOT"
+RELEASE_ID="$SERVICE_CREATOR_RELEASE_ID"
+ARTIFACT_DIR="$SERVICE_CREATOR_ARTIFACT_DIR"
+ENVIRONMENT_FILE="$SERVICE_CREATOR_ENV_FILE"
+RELEASES_DIR="$DEPLOY_ROOT/releases"
+RELEASE_PATH="$RELEASES_DIR/$RELEASE_ID"
+CURRENT_LINK="$DEPLOY_ROOT/current"
+CONFIG_DIR="$(dirname "$ENVIRONMENT_FILE")"
+
+[[ "$RELEASE_ID" =~ ^[A-Za-z0-9._-]+$ ]] || {
+  echo "Error: invalid release ID: $RELEASE_ID" >&2
+  exit 2
+}
+[[ -f "$ARTIFACT_DIR/pyproject.toml" ]] || {
+  echo "Error: controller artifact is missing pyproject.toml." >&2
+  exit 1
+}
+[[ -s "$ARTIFACT_DIR/runtime-requirements.lock" ]] || {
+  echo "Error: runtime-requirements.lock is missing or empty." >&2
+  exit 1
+}
+if grep -Ev '^[[:space:]]*(#|$|[A-Za-z0-9_.-]+==[^[:space:]]+([[:space:]]*;.*)?)$' \
+  "$ARTIFACT_DIR/runtime-requirements.lock" >/dev/null; then
+  echo "Error: runtime-requirements.lock contains a non-exact requirement." >&2
+  exit 1
+fi
+[[ -f "$ENVIRONMENT_FILE" ]] || {
+  echo "Error: controller-managed environment is missing: $ENVIRONMENT_FILE" >&2
+  exit 1
+}
+
+sudo id "$SERVICE_USER" >/dev/null 2>&1 ||
+  sudo useradd --system --home "$STATE_DIR" --shell /usr/sbin/nologin "$SERVICE_USER"
+install -d -m 0755 "$RELEASES_DIR"
+sudo install -d -m 0755 "$CONFIG_DIR"
+sudo install -d -o "$SERVICE_USER" -g "$SERVICE_USER" -m 0750 "$STATE_DIR"
+
+if [[ -e "$RELEASE_PATH" ]]; then
+  if [[ ! -f "$RELEASE_PATH/release.env" ]] \
+    || ! grep -Fqx "ARTIFACT_SHA256=$SERVICE_CREATOR_ARTIFACT_SHA256" \
+      "$RELEASE_PATH/release.env"; then
+    echo "Error: immutable release collision: $RELEASE_PATH" >&2
+    exit 1
+  fi
+else
+  install -d -m 0755 "$RELEASE_PATH"
+  cleanup() { rm -rf -- "$RELEASE_PATH"; }
+  trap cleanup EXIT
+  install -d -m 0755 "$RELEASE_PATH/app" "$RELEASE_PATH/.service-creator"
+  rsync -a --delete \
+    --exclude .git --exclude .venv --exclude .env --exclude __pycache__ \
+    "$ARTIFACT_DIR/" "$RELEASE_PATH/app/"
+  install -m 0755 "$SCRIPT_DIR/readiness.sh" "$RELEASE_PATH/.service-creator/readiness"
+  python3 -m venv "$RELEASE_PATH/venv"
+  "$RELEASE_PATH/venv/bin/python" -m pip install \
+    --requirement "$RELEASE_PATH/app/runtime-requirements.lock"
+  "$RELEASE_PATH/venv/bin/python" -m pip install \
+    --no-build-isolation --no-deps "$RELEASE_PATH/app"
+  printf 'RELEASE_ID=%s\nARTIFACT_SHA256=%s\nREPOSITORY=%s\n' \
+    "$RELEASE_ID" "$SERVICE_CREATOR_ARTIFACT_SHA256" \
+    "${SERVICE_CREATOR_REPOSITORY:-unknown}" |
+    tee "$RELEASE_PATH/release.env" >/dev/null
+  chmod 0444 "$RELEASE_PATH/release.env"
+  chmod 0755 "$RELEASE_PATH" "$RELEASE_PATH/app" "$RELEASE_PATH/venv" \
+    "$RELEASE_PATH/.service-creator"
+  trap - EXIT
+fi
+
+case "${SERVICE_CREATOR_INITIALIZE_MODE:-}" in
+  "") ;;
+  initialize)
+    SERVICE_CREATOR_PREPARED_RELEASE="$RELEASE_PATH" "$SCRIPT_DIR/initialize.sh"
+    ;;
+  --reinstall)
+    SERVICE_CREATOR_PREPARED_RELEASE="$RELEASE_PATH" "$SCRIPT_DIR/initialize.sh" --reinstall
+    ;;
+  *) echo "Error: invalid initialization mode" >&2; exit 2 ;;
+esac
+
+install_supervisor_assets() {
+  local release="$1"
+  local source="$release/app/deploy"
+  sed "s|/opt/$SERVICE_NAME|$DEPLOY_ROOT|g" "$source/$SERVICE_NAME.service" |
+    sudo tee "/etc/systemd/system/$SERVICE_NAME.service" >/dev/null
+  sudo chmod 0644 "/etc/systemd/system/$SERVICE_NAME.service"
+  if [[ -f "$source/$SERVICE_NAME.timer" ]]; then
+    sudo install -m 0644 "$source/$SERVICE_NAME.timer" "/etc/systemd/system/$SERVICE_NAME.timer"
+  else
+    sudo rm -f "/etc/systemd/system/$SERVICE_NAME.timer"
+  fi
+  sudo systemctl daemon-reload
+}
+
+PREVIOUS_TARGET=""
+if [[ -L "$CURRENT_LINK" ]]; then
+  PREVIOUS_TARGET="$(readlink -f "$CURRENT_LINK")"
+  [[ "$PREVIOUS_TARGET" == "$RELEASE_PATH" ]] && PREVIOUS_TARGET=""
+fi
+ln -sfn "$RELEASE_PATH" "$DEPLOY_ROOT/current.new"
+mv -Tf "$DEPLOY_ROOT/current.new" "$CURRENT_LINK"
+install_supervisor_assets "$RELEASE_PATH"
+activation_status=0
+if [[ -f "$RELEASE_PATH/app/deploy/$SERVICE_NAME.timer" ]]; then
+  sudo systemctl enable --now "$SERVICE_NAME.timer" || activation_status=$?
+else
+  sudo systemctl enable "$SERVICE_NAME.service" || activation_status=$?
+  ((activation_status != 0)) || sudo systemctl restart "$SERVICE_NAME.service" || activation_status=$?
+fi
+((activation_status != 0)) || "$CURRENT_LINK/.service-creator/readiness" || activation_status=$?
+if ((activation_status != 0)); then
+  if [[ -n "$PREVIOUS_TARGET" && -d "$PREVIOUS_TARGET" ]]; then
+    ln -sfn "$PREVIOUS_TARGET" "$DEPLOY_ROOT/current.rollback"
+    mv -Tf "$DEPLOY_ROOT/current.rollback" "$CURRENT_LINK"
+    install_supervisor_assets "$PREVIOUS_TARGET"
+    sudo systemctl restart "$SERVICE_NAME.service" || true
+  else
+    rm -f -- "$CURRENT_LINK"
+    sudo systemctl disable --now "$SERVICE_NAME.service" || true
+  fi
+  exit "$activation_status"
+fi
+echo "Activated $RELEASE_PATH"

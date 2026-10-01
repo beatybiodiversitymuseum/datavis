@@ -1,0 +1,3 @@
+# Public datasets are an explicit source-controlled allowlist. Add only saved
+# queries whose displayed fields have been reviewed for public disclosure.
+datasets: {}

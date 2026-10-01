@@ -1,0 +1,22 @@
+[Unit]
+Description=Private allowlisted Specify query CSV API for Datavis applications
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=datavis-api
+Group=datavis-api
+EnvironmentFile=/etc/datavis-api/service.env
+WorkingDirectory=/opt/datavis-api/current/app
+ExecStart=/opt/datavis-api/current/venv/bin/datavis-api serve
+Restart=on-failure
+RestartSec=10s
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/datavis-api
+
+[Install]
+WantedBy=multi-user.target

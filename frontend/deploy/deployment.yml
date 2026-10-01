@@ -1,0 +1,25 @@
+---
+schema_version: 1
+application:
+  name: datavis
+deployment:
+  interface: service_creator_v1
+  install: deploy/install.sh
+  readiness: deploy/readiness.sh
+  health_path: /datavis/_stcore/health
+  default_root: /opt/datavis
+
+  defaults_file: deploy/defaults.env
+  environment_file: /etc/datavis/service.env
+
+  generated_secret_env:
+    datavis_api_api_token: DATAVIS_BACKEND_TOKEN
+
+  allocation_env:
+    bind_host: DATAVIS_HOST
+    app_port: DATAVIS_PORT
+    backend_url: DATAVIS_BACKEND_URL
+
+  ingress:
+    type: nginx_proxy
+    path: /datavis

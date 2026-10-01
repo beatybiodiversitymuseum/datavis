@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "datavis-api"
+version = "0.1.0"
+description = "Private allowlisted Specify query CSV API for Datavis applications"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115,<1",
+    "python-dotenv>=1,<2",
+    "pyyaml>=6,<7",
+    "specify-client @ git+https://github.com/beatybiodiversitymuseum/specify-client.git@v0.6.0",
+    "uvicorn[standard]>=0.34,<1",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[project.scripts]
+datavis-api = "datavis_api.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,22 @@
+[Unit]
+Description=Public multipage Streamlit host for curated Specify visualizations
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=datavis
+Group=datavis
+EnvironmentFile=/etc/datavis/service.env
+WorkingDirectory=/opt/datavis/current/app
+ExecStart=/opt/datavis/current/venv/bin/datavis serve
+Restart=on-failure
+RestartSec=10s
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/datavis
+
+[Install]
+WantedBy=multi-user.target
