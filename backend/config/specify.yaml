@@ -1,4 +1,4 @@
-base_url: https://specify.beatymuseum.ubc.ca
+base_url: https://database.beatymuseum.ubc.ca
 timeout: 180
 requests_per_minute: 60
 retry_attempts: 3
