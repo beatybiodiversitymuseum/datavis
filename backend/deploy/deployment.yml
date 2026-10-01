@@ -4,12 +4,12 @@ application:
   name: datavis-api
 deployment:
   interface: service_creator_v1
-  install: deploy/install.sh
-  readiness: deploy/readiness.sh
+  install: backend/deploy/install.sh
+  readiness: backend/deploy/readiness.sh
   health_path: /health/ready
   default_root: /opt/datavis-api
 
-  defaults_file: deploy/defaults.env
+  defaults_file: backend/deploy/defaults.env
   environment_file: /etc/datavis-api/service.env
 
   generated_secret_env:
