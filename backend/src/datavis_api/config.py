@@ -60,6 +60,7 @@ class Dataset:
     title: str
     description: str
     query_id: int
+    required_columns: tuple[str, ...]
 
 
 def load_datasets(path: Path) -> dict[str, Dataset]:
@@ -75,6 +76,8 @@ def load_datasets(path: Path) -> dict[str, Dataset]:
             raise ConfigurationError(f"invalid dataset slug: {slug!r}")
         if not isinstance(item, dict):
             raise ConfigurationError(f"dataset {slug!r} must be a mapping")
+        if item.get("enabled") is False:
+            continue
         try:
             query_id = int(item["query_id"])
             title = str(item["title"]).strip()
@@ -82,10 +85,16 @@ def load_datasets(path: Path) -> dict[str, Dataset]:
             raise ConfigurationError(f"dataset {slug!r} requires title and query_id") from error
         if query_id < 1 or not title:
             raise ConfigurationError(f"dataset {slug!r} has invalid title or query_id")
+        required_columns = item.get("required_columns", [])
+        if not isinstance(required_columns, list) or not all(
+            isinstance(column, str) and column for column in required_columns
+        ):
+            raise ConfigurationError(f"dataset {slug!r} has invalid required_columns")
         datasets[slug] = Dataset(
             slug=slug,
             title=title,
             description=str(item.get("description", "")).strip(),
             query_id=query_id,
+            required_columns=tuple(required_columns),
         )
     return datasets

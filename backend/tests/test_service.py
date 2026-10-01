@@ -33,6 +33,11 @@ def test_enforces_row_limit():
         render_query_csv(Client(), 42, 0)
 
 
+def test_enforces_reviewed_column_contract():
+    with pytest.raises(ExportError, match="reviewed dataset contract"):
+        render_query_csv(Client(), 42, 10, ("catalogNumber",))
+
+
 def test_dataset_registry_is_explicit_allowlist(tmp_path: Path):
     registry = tmp_path / "datasets.yaml"
     registry.write_text("datasets:\n  plants:\n    title: Plants\n    query_id: 42\n")
@@ -44,3 +49,11 @@ def test_rejects_invalid_query_id(tmp_path: Path):
     registry.write_text("datasets:\n  plants:\n    title: Plants\n    query_id: 0\n")
     with pytest.raises(ConfigurationError):
         load_datasets(registry)
+
+
+def test_disabled_dataset_does_not_require_query_id(tmp_path: Path):
+    registry = tmp_path / "datasets.yaml"
+    registry.write_text(
+        "datasets:\n  plants:\n    enabled: false\n    title: Plants\n    query_id: null\n"
+    )
+    assert load_datasets(registry) == {}

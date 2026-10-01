@@ -1,3 +1,20 @@
-# Public datasets are an explicit source-controlled allowlist. Add only saved
-# queries whose displayed fields have been reviewed for public disclosure.
-datasets: {}
+# Public datasets are an explicit source-controlled allowlist. Disabled entries
+# document reviewed contracts but cannot be requested until a saved query ID is
+# assigned and enabled.
+datasets:
+  herbarium-algae:
+    enabled: false
+    query_id: null
+    title: UBC Herbarium Algae
+    description: Algae specimens, collectors, collection dates, and localities.
+    required_columns:
+      - catalogNumber
+      - collectionDate
+      - localityName
+      - latitude
+      - longitude
+      - country
+      - stateProvince
+      - collectorFirstName
+      - collectorMiddleInitial
+      - collectorLastName

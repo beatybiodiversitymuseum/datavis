@@ -64,7 +64,10 @@ def dataset_csv(slug: str) -> Response:
         raise HTTPException(status_code=429, detail="a dataset export is already running")
     try:
         content = render_query_csv(
-            get_specify_client(settings), dataset.query_id, settings.max_csv_rows
+            get_specify_client(settings),
+            dataset.query_id,
+            settings.max_csv_rows,
+            dataset.required_columns,
         )
     except ExportError as error:
         raise HTTPException(status_code=502, detail=str(error)) from error
