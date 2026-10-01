@@ -67,6 +67,7 @@ class Dataset:
     title: str
     description: str
     query_id: int
+    source_columns: tuple[str, ...]
     required_columns: tuple[str, ...]
 
 
@@ -97,11 +98,19 @@ def load_datasets(path: Path) -> dict[str, Dataset]:
             isinstance(column, str) and column for column in required_columns
         ):
             raise ConfigurationError(f"dataset {slug!r} has invalid required_columns")
+        source_columns = item.get("source_columns", required_columns)
+        if (
+            not isinstance(source_columns, list)
+            or not all(isinstance(column, str) and column for column in source_columns)
+            or len(source_columns) != len(required_columns)
+        ):
+            raise ConfigurationError(f"dataset {slug!r} has invalid source_columns")
         datasets[slug] = Dataset(
             slug=slug,
             title=title,
             description=str(item.get("description", "")).strip(),
             query_id=query_id,
+            source_columns=tuple(source_columns),
             required_columns=tuple(required_columns),
         )
     return datasets

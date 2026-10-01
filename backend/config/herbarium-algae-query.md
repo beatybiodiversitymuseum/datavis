@@ -2,7 +2,8 @@
 
 Specify saved query `685` in collection `Algae` (`collection ID 32768`) uses
 Collection Object as the base table. The query must return one row per specimen
-and expose these displayed columns in this exact order and with these aliases:
+and expose these displayed fields in this exact order. `datasets.yaml` records
+their exact Specify field identifiers and maps them to these public CSV names:
 
 | Alias | Schema Explorer path | Specify label | Purpose |
 |---|---|---|---|

@@ -35,7 +35,13 @@ def test_enforces_row_limit():
 
 def test_enforces_reviewed_column_contract():
     with pytest.raises(ExportError, match="reviewed dataset contract"):
-        render_query_csv(Client(), 42, 10, ("catalogNumber",))
+        render_query_csv(Client(), 42, 10, ("wrong.source",), ("catalogNumber",))
+
+
+def test_maps_reviewed_source_columns_to_public_csv_names():
+    assert render_query_csv(
+        Client(), 42, 10, ("1.name",), ("scientificName",)
+    ) == b"scientificName\r\nOak\r\n"
 
 
 def test_dataset_registry_is_explicit_allowlist(tmp_path: Path):

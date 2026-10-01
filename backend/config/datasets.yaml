@@ -7,6 +7,17 @@ datasets:
     query_id: 685
     title: UBC Herbarium Algae
     description: Algae specimens, collectors, collection dates, and localities.
+    source_columns:
+      - 1.collectionobject.catalogNumber
+      - 1,10.collectingevent.endDate
+      - 1,10,2.locality.localityName
+      - 1,10,2.locality.latitude1
+      - 1,10,2.locality.longitude1
+      - 1,10,2,3.geography.Country
+      - 1,10,2,3.geography.State
+      - 1,10,30-collectors,5.agent.firstName
+      - 1,10,30-collectors,5.agent.middleInitial
+      - 1,10,30-collectors,5.agent.lastName
     required_columns:
       - catalogNumber
       - collectionDate

@@ -19,7 +19,7 @@ def settings(tmp_path: Path, ttl: int = 86400):
 
 
 def dataset():
-    return Dataset("plants", "Plants", "", 42, ("name",))
+    return Dataset("plants", "Plants", "", 42, ("1.name",), ("name",))
 
 
 def test_atomic_cache_round_trip(tmp_path):
