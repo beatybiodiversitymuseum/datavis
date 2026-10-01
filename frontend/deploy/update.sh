@@ -14,7 +14,7 @@ STATE_DIR="/var/lib/datavis"
 
 DEPLOY_ROOT="$SERVICE_CREATOR_DEPLOY_ROOT"
 RELEASE_ID="$SERVICE_CREATOR_RELEASE_ID"
-ARTIFACT_DIR="$SERVICE_CREATOR_ARTIFACT_DIR"
+ARTIFACT_DIR="${SERVICE_CREATOR_ARTIFACT_DIR%/}/frontend"
 ENVIRONMENT_FILE="$SERVICE_CREATOR_ENV_FILE"
 RELEASES_DIR="$DEPLOY_ROOT/releases"
 RELEASE_PATH="$RELEASES_DIR/$RELEASE_ID"
@@ -26,7 +26,7 @@ CONFIG_DIR="$(dirname "$ENVIRONMENT_FILE")"
   exit 2
 }
 [[ -f "$ARTIFACT_DIR/pyproject.toml" ]] || {
-  echo "Error: controller artifact is missing pyproject.toml." >&2
+  echo "Error: controller artifact is missing frontend/pyproject.toml." >&2
   exit 1
 }
 [[ -s "$ARTIFACT_DIR/runtime-requirements.lock" ]] || {
