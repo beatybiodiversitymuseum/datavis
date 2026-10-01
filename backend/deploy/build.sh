@@ -28,8 +28,8 @@ done
 
 install -m 0644 "$COMPONENT_ROOT/runtime-requirements.lock" \
   "$TEMP_ARTIFACT/runtime-requirements.lock"
-install -m 0644 "$COMPONENT_ROOT/deploy/datavis-api.service" \
-  "$TEMP_ARTIFACT/systemd/datavis-api.service"
+install -m 0644 "$COMPONENT_ROOT/deploy/"*.service \
+  "$COMPONENT_ROOT/deploy/"*.timer "$TEMP_ARTIFACT/systemd/"
 install -m 0644 "$COMPONENT_ROOT/config/datasets.yaml" \
   "$COMPONENT_ROOT/config/specify.yaml" "$TEMP_ARTIFACT/config/"
 rm -f "$TEMP_ARTIFACT/public-requirements.lock"

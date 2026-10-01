@@ -68,15 +68,27 @@ The controller supplies externally managed `SPECIFY_USERNAME` and `SPECIFY_PASSW
 
 Responses are bounded by `DATAVIS_MAX_CSV_ROWS` (100,000 by default). The backend rejects unlisted slugs and strips Specify's internal record ID from the CSV. Query headers come from the saved query's own displayed-field metadata; no Darwin Core transformation is performed.
 
+The backend keeps the last successful CSV for each dataset under
+`/var/lib/datavis-api/cache`. Cached data is fresh for 24 hours, controlled by
+`DATAVIS_CACHE_TTL_SECONDS=86400`. Requests refresh expired data synchronously
+and fall back to the last successful CSV when Specify is temporarily
+unavailable. Response headers report `X-Datavis-Cache` as `HIT`, `MISS`, or
+`STALE` and include `X-Datavis-Generated-At`. A systemd timer refreshes every
+published dataset nightly at 03:15 America/Vancouver with up to 30 minutes of
+random delay; timer failures remain visible to operators while the prior cache
+is preserved.
+
 ## Production deployment
 
-The repository exposes source artifacts and deploys only through `beatybiodiversitymuseum/ansible-deploy`:
+The backend exposes a controller-built offline wheelhouse, the frontend exposes
+a source artifact, and both deploy only through
+`beatybiodiversitymuseum/ansible-deploy`:
 
 ```bash
 cd /path/to/ansible-deploy
 source .venv/bin/activate
-ansible-playbook playbooks/deploy_app.yml -e app=datavis_api -e app_revision=<git-revision>
-ansible-playbook playbooks/deploy_app.yml -e app=datavis -e app_revision=<git-revision>
+./deploy datavis_api <git-revision>
+./deploy datavis <git-revision>
 ```
 
 Deploy `datavis_api` first. Its manifest is `backend/deploy/deployment.yml`; the public Streamlit manifest is `frontend/deploy/deployment.yml`. Production readiness is not established until matching controller inventory entries, secrets, allocations, nginx ingress, and a reviewed dataset have been added and both deployments pass.
@@ -85,6 +97,8 @@ Service logs:
 
 ```bash
 journalctl -u datavis-api.service --since today --no-pager
+journalctl -u datavis-api-cache-refresh.service --since today --no-pager
+systemctl status datavis-api-cache-refresh.timer
 journalctl -u datavis.service --since today --no-pager
 ```
 

@@ -97,16 +97,14 @@ case "${SERVICE_CREATOR_INITIALIZE_MODE:-}" in
 esac
 
 install_supervisor_assets() {
-  local release="$1"
+  local release="$1" unit
   local source="$release/systemd"
-  sed "s|/opt/$SERVICE_NAME|$DEPLOY_ROOT|g" "$source/$SERVICE_NAME.service" |
-    sudo tee "/etc/systemd/system/$SERVICE_NAME.service" >/dev/null
-  sudo chmod 0644 "/etc/systemd/system/$SERVICE_NAME.service"
-  if [[ -f "$source/$SERVICE_NAME.timer" ]]; then
-    sudo install -m 0644 "$source/$SERVICE_NAME.timer" "/etc/systemd/system/$SERVICE_NAME.timer"
-  else
-    sudo rm -f "/etc/systemd/system/$SERVICE_NAME.timer"
-  fi
+  for unit in "$source"/*.service "$source"/*.timer; do
+    [[ -f "$unit" ]] || continue
+    sed "s|/opt/$SERVICE_NAME|$DEPLOY_ROOT|g" "$unit" |
+      sudo tee "/etc/systemd/system/$(basename "$unit")" >/dev/null
+    sudo chmod 0644 "/etc/systemd/system/$(basename "$unit")"
+  done
   sudo systemctl daemon-reload
 }
 
@@ -119,12 +117,10 @@ ln -sfn "$RELEASE_PATH" "$DEPLOY_ROOT/current.new"
 mv -Tf "$DEPLOY_ROOT/current.new" "$CURRENT_LINK"
 install_supervisor_assets "$RELEASE_PATH"
 activation_status=0
-if [[ -f "$RELEASE_PATH/systemd/$SERVICE_NAME.timer" ]]; then
-  sudo systemctl enable --now "$SERVICE_NAME.timer" || activation_status=$?
-else
-  sudo systemctl enable "$SERVICE_NAME.service" || activation_status=$?
-  ((activation_status != 0)) || sudo systemctl restart "$SERVICE_NAME.service" || activation_status=$?
-fi
+sudo systemctl enable "$SERVICE_NAME.service" || activation_status=$?
+((activation_status != 0)) || sudo systemctl restart "$SERVICE_NAME.service" || activation_status=$?
+((activation_status != 0)) || sudo systemctl enable --now \
+  "$SERVICE_NAME-cache-refresh.timer" || activation_status=$?
 ((activation_status != 0)) || "$CURRENT_LINK/.service-creator/readiness" || activation_status=$?
 if ((activation_status != 0)); then
   if [[ -n "$PREVIOUS_TARGET" && -d "$PREVIOUS_TARGET" ]]; then
@@ -132,9 +128,11 @@ if ((activation_status != 0)); then
     mv -Tf "$DEPLOY_ROOT/current.rollback" "$CURRENT_LINK"
     install_supervisor_assets "$PREVIOUS_TARGET"
     sudo systemctl restart "$SERVICE_NAME.service" || true
+    sudo systemctl enable --now "$SERVICE_NAME-cache-refresh.timer" || true
   else
     rm -f -- "$CURRENT_LINK"
     sudo systemctl disable --now "$SERVICE_NAME.service" || true
+    sudo systemctl disable --now "$SERVICE_NAME-cache-refresh.timer" || true
   fi
   exit "$activation_status"
 fi

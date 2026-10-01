@@ -15,6 +15,7 @@ class ConfigurationError(ValueError):
 @dataclass(frozen=True)
 class Settings:
     state_dir: Path
+    cache_ttl_seconds: int
     log_level: str
     datasets_path: Path
     specify_settings_path: Path
@@ -38,14 +39,20 @@ class Settings:
         try:
             collection_id = int(os.environ["SPECIFY_COLLECTION_ID"])
             max_csv_rows = int(os.environ.get("DATAVIS_MAX_CSV_ROWS", "100000"))
+            cache_ttl_seconds = int(
+                os.environ.get("DATAVIS_CACHE_TTL_SECONDS", "86400")
+            )
         except (KeyError, ValueError) as error:
             raise ConfigurationError(
-                "SPECIFY_COLLECTION_ID and DATAVIS_MAX_CSV_ROWS must be integers"
+                "collection ID, row limit, and cache TTL must be integers"
             ) from error
-        if collection_id < 1 or max_csv_rows < 1:
-            raise ConfigurationError("collection ID and maximum CSV rows must be positive")
+        if collection_id < 1 or max_csv_rows < 1 or cache_ttl_seconds < 1:
+            raise ConfigurationError(
+                "collection ID, maximum CSV rows, and cache TTL must be positive"
+            )
         return cls(
             state_dir=Path(state_dir),
+            cache_ttl_seconds=cache_ttl_seconds,
             log_level=log_level,
             datasets_path=datasets_path,
             specify_settings_path=specify_settings_path,

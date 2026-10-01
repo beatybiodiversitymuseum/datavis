@@ -14,6 +14,7 @@ def test_settings_load_from_environment(monkeypatch):
 
     assert settings.state_dir == Path("/tmp/service-state")
     assert settings.log_level == "DEBUG"
+    assert settings.cache_ttl_seconds == 86400
 
 
 def test_state_dir_is_required(monkeypatch):

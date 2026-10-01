@@ -1,0 +1,11 @@
+[Unit]
+Description=Nightly refresh of cached Datavis CSV datasets
+
+[Timer]
+OnCalendar=*-*-* 03:15:00 America/Vancouver
+RandomizedDelaySec=30m
+Persistent=true
+Unit=datavis-api-cache-refresh.service
+
+[Install]
+WantedBy=timers.target

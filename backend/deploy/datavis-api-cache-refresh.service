@@ -1,0 +1,17 @@
+[Unit]
+Description=Refresh cached Datavis CSV datasets
+After=network-online.target datavis-api.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=datavis-api
+Group=datavis-api
+EnvironmentFile=/etc/datavis-api/service.env
+WorkingDirectory=/opt/datavis-api/current/app
+ExecStart=/opt/datavis-api/current/venv/bin/datavis-api refresh-cache
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/datavis-api

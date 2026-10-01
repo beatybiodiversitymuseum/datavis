@@ -17,3 +17,14 @@ def test_initialize_command_loads_settings_and_initializes(monkeypatch, tmp_path
 
     assert result == 0
     initialize.assert_called_once()
+
+
+def test_refresh_cache_command_loads_settings(monkeypatch, tmp_path):
+    configure(monkeypatch, tmp_path)
+
+    with patch.object(cli, "refresh_all_datasets") as refresh:
+        with patch("sys.argv", ["datavis-api", "refresh-cache"]):
+            result = cli.main()
+
+    assert result == 0
+    refresh.assert_called_once()
