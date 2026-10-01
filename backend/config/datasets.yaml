@@ -3,8 +3,8 @@
 # assigned and enabled.
 datasets:
   herbarium-algae:
-    enabled: false
-    query_id: null
+    enabled: true
+    query_id: 685
     title: UBC Herbarium Algae
     description: Algae specimens, collectors, collection dates, and localities.
     required_columns:

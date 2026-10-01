@@ -1,6 +1,6 @@
 # Herbarium algae saved-query specification
 
-Create a Specify saved query in collection `Algae` (`collection ID 32768`) with
+Specify saved query `685` in collection `Algae` (`collection ID 32768`) uses
 Collection Object as the base table. The query must return one row per specimen
 and expose these displayed columns in this exact order and with these aliases:
 
