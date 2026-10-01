@@ -9,6 +9,9 @@ deployment:
   health_path: /health/ready
   default_root: /opt/datavis-api
 
+  build: backend/deploy/build.sh
+  artifact_root: backend/.deploy-artifact
+
   defaults_file: backend/deploy/defaults.env
   environment_file: /etc/datavis-api/service.env
 

@@ -14,7 +14,7 @@ STATE_DIR="/var/lib/datavis-api"
 
 DEPLOY_ROOT="$SERVICE_CREATOR_DEPLOY_ROOT"
 RELEASE_ID="$SERVICE_CREATOR_RELEASE_ID"
-ARTIFACT_DIR="${SERVICE_CREATOR_ARTIFACT_DIR%/}/backend"
+ARTIFACT_DIR="$SERVICE_CREATOR_ARTIFACT_DIR"
 ENVIRONMENT_FILE="$SERVICE_CREATOR_ENV_FILE"
 RELEASES_DIR="$DEPLOY_ROOT/releases"
 RELEASE_PATH="$RELEASES_DIR/$RELEASE_ID"
@@ -25,8 +25,8 @@ CONFIG_DIR="$(dirname "$ENVIRONMENT_FILE")"
   echo "Error: invalid release ID: $RELEASE_ID" >&2
   exit 2
 }
-[[ -f "$ARTIFACT_DIR/pyproject.toml" ]] || {
-  echo "Error: controller artifact is missing backend/pyproject.toml." >&2
+[[ -d "$ARTIFACT_DIR/wheelhouse" ]] || {
+  echo "Error: controller artifact is missing the backend wheelhouse." >&2
   exit 1
 }
 [[ -s "$ARTIFACT_DIR/runtime-requirements.lock" ]] || {
@@ -60,22 +60,27 @@ else
   install -d -m 0755 "$RELEASE_PATH"
   cleanup() { rm -rf -- "$RELEASE_PATH"; }
   trap cleanup EXIT
-  install -d -m 0755 "$RELEASE_PATH/app" "$RELEASE_PATH/.service-creator"
-  rsync -a --delete \
-    --exclude .git --exclude .venv --exclude .env --exclude __pycache__ \
-    "$ARTIFACT_DIR/" "$RELEASE_PATH/app/"
+  install -d -m 0755 "$RELEASE_PATH/app/config" "$RELEASE_PATH/wheelhouse" \
+    "$RELEASE_PATH/systemd" "$RELEASE_PATH/.service-creator"
+  rsync -a --delete "$ARTIFACT_DIR/config/" "$RELEASE_PATH/app/config/"
+  rsync -a --delete "$ARTIFACT_DIR/wheelhouse/" "$RELEASE_PATH/wheelhouse/"
+  rsync -a --delete "$ARTIFACT_DIR/systemd/" "$RELEASE_PATH/systemd/"
+  install -m 0644 "$ARTIFACT_DIR/runtime-requirements.lock" \
+    "$RELEASE_PATH/runtime-requirements.lock"
   install -m 0755 "$SCRIPT_DIR/readiness.sh" "$RELEASE_PATH/.service-creator/readiness"
   python3 -m venv "$RELEASE_PATH/venv"
-  "$RELEASE_PATH/venv/bin/python" -m pip install \
-    --requirement "$RELEASE_PATH/app/runtime-requirements.lock"
-  "$RELEASE_PATH/venv/bin/python" -m pip install \
-    --no-build-isolation --no-deps "$RELEASE_PATH/app"
+  "$RELEASE_PATH/venv/bin/python" -m pip install --no-index \
+    --find-links "$RELEASE_PATH/wheelhouse" \
+    --requirement "$RELEASE_PATH/runtime-requirements.lock"
+  "$RELEASE_PATH/venv/bin/python" -m pip install --no-index --no-deps \
+    "$RELEASE_PATH"/wheelhouse/datavis_api-*.whl
   printf 'RELEASE_ID=%s\nARTIFACT_SHA256=%s\nREPOSITORY=%s\n' \
     "$RELEASE_ID" "$SERVICE_CREATOR_ARTIFACT_SHA256" \
     "${SERVICE_CREATOR_REPOSITORY:-unknown}" |
     tee "$RELEASE_PATH/release.env" >/dev/null
   chmod 0444 "$RELEASE_PATH/release.env"
   chmod 0755 "$RELEASE_PATH" "$RELEASE_PATH/app" "$RELEASE_PATH/venv" \
+    "$RELEASE_PATH/wheelhouse" "$RELEASE_PATH/systemd" \
     "$RELEASE_PATH/.service-creator"
   trap - EXIT
 fi
@@ -93,7 +98,7 @@ esac
 
 install_supervisor_assets() {
   local release="$1"
-  local source="$release/app/deploy"
+  local source="$release/systemd"
   sed "s|/opt/$SERVICE_NAME|$DEPLOY_ROOT|g" "$source/$SERVICE_NAME.service" |
     sudo tee "/etc/systemd/system/$SERVICE_NAME.service" >/dev/null
   sudo chmod 0644 "/etc/systemd/system/$SERVICE_NAME.service"
@@ -114,7 +119,7 @@ ln -sfn "$RELEASE_PATH" "$DEPLOY_ROOT/current.new"
 mv -Tf "$DEPLOY_ROOT/current.new" "$CURRENT_LINK"
 install_supervisor_assets "$RELEASE_PATH"
 activation_status=0
-if [[ -f "$RELEASE_PATH/app/deploy/$SERVICE_NAME.timer" ]]; then
+if [[ -f "$RELEASE_PATH/systemd/$SERVICE_NAME.timer" ]]; then
   sudo systemctl enable --now "$SERVICE_NAME.timer" || activation_status=$?
 else
   sudo systemctl enable "$SERVICE_NAME.service" || activation_status=$?
