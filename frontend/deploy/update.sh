@@ -33,7 +33,7 @@ CONFIG_DIR="$(dirname "$ENVIRONMENT_FILE")"
   echo "Error: runtime-requirements.lock is missing or empty." >&2
   exit 1
 }
-if grep -Ev '^[[:space:]]*(#|$|[A-Za-z0-9_.-]+==[^[:space:]]+([[:space:]]*;.*)?)$' \
+if grep -Ev '^[[:space:]]*(#.*|$|[A-Za-z0-9_.-]+==[^[:space:]]+([[:space:]]*;.*)?)$' \
   "$ARTIFACT_DIR/runtime-requirements.lock" >/dev/null; then
   echo "Error: runtime-requirements.lock contains a non-exact requirement." >&2
   exit 1
