@@ -1,6 +1,6 @@
 """Private backend client used only by the server-side Streamlit process."""
 
-from io import BytesIO
+import tempfile
 
 import pandas as pd
 import requests
@@ -20,8 +20,13 @@ class DatasetClient:
         return response.json()
 
     def dataframe(self, slug: str) -> pd.DataFrame:
-        response = self.session.get(
-            f"{self.base_url}/v1/datasets/{slug}.csv", timeout=190
-        )
-        response.raise_for_status()
-        return pd.read_csv(BytesIO(response.content))
+        with self.session.get(
+            f"{self.base_url}/v1/datasets/{slug}.csv", timeout=190, stream=True
+        ) as response:
+            response.raise_for_status()
+            with tempfile.TemporaryFile(mode="w+b") as csv_file:
+                for chunk in response.iter_content(chunk_size=1024 * 1024):
+                    if chunk:
+                        csv_file.write(chunk)
+                csv_file.seek(0)
+                return pd.read_csv(csv_file)

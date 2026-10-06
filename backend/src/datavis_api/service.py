@@ -3,18 +3,22 @@
 import hmac
 import logging
 import os
-import threading
 
 from fastapi import Depends, FastAPI, Header, HTTPException
-from fastapi.responses import Response
+from fastapi.responses import FileResponse
 
-from .cache import CachedCsv, is_fresh, read_cached_csv, write_cached_csv
+from .cache import (
+    CachedCsv,
+    atomic_cache_writer,
+    dataset_lock,
+    is_fresh,
+    read_cached_csv,
+)
 from .config import Dataset, Settings, load_datasets
 from .connections import get_specify_client
-from .csv_export import ExportError, render_query_csv
+from .csv_export import ExportError, write_query_csv
 
 app = FastAPI(title='Private allowlisted Specify query CSV API for Datavis applications')
-query_lock = threading.Lock()
 logger = logging.getLogger(__name__)
 
 
@@ -33,23 +37,22 @@ def cached_dataset_csv(
     cached = read_cached_csv(settings.state_dir, dataset.slug)
     if not force and cached is not None and is_fresh(cached, settings.cache_ttl_seconds):
         return cached, "HIT"
-    if not query_lock.acquire(timeout=1):
-        if cached is not None and allow_stale:
-            return cached, "STALE"
-        raise ExportError("a dataset export is already running")
-    try:
+    with dataset_lock(settings.state_dir, dataset.slug) as acquired:
+        if not acquired:
+            if cached is not None and allow_stale:
+                return cached, "STALE"
+            raise ExportError("a dataset export is already running")
         cached = read_cached_csv(settings.state_dir, dataset.slug)
         if not force and cached is not None and is_fresh(
             cached, settings.cache_ttl_seconds
         ):
             return cached, "HIT"
         try:
-            content = render_query_csv(
-                get_specify_client(settings),
-                dataset.query_id,
-                settings.max_csv_rows,
-            )
-            return write_cached_csv(settings.state_dir, dataset.slug, content), "MISS"
+            with atomic_cache_writer(settings.state_dir, dataset.slug) as output:
+                write_query_csv(get_specify_client(settings), dataset.query_id, output)
+            refreshed = read_cached_csv(settings.state_dir, dataset.slug)
+            assert refreshed is not None
+            return refreshed, "MISS"
         except Exception:
             if cached is None or not allow_stale:
                 raise
@@ -57,8 +60,6 @@ def cached_dataset_csv(
                 "Dataset refresh failed; serving stale cache for %s", dataset.slug
             )
             return cached, "STALE"
-    finally:
-        query_lock.release()
 
 
 def refresh_all_datasets(settings: Settings) -> None:
@@ -101,7 +102,7 @@ def list_datasets() -> list[dict[str, str]]:
 
 
 @app.get("/v1/datasets/{slug}.csv", dependencies=[Depends(require_service_token)])
-def dataset_csv(slug: str) -> Response:
+def dataset_csv(slug: str) -> FileResponse:
     settings = Settings.from_environment()
     dataset = load_datasets(settings.datasets_path).get(slug)
     if dataset is None:
@@ -113,11 +114,11 @@ def dataset_csv(slug: str) -> Response:
     except Exception as error:
         logger.exception("Dataset export failed for %s", slug)
         raise HTTPException(status_code=502, detail="dataset refresh failed") from error
-    return Response(
-        content=cached.content,
+    return FileResponse(
+        path=cached.path,
         media_type="text/csv; charset=utf-8",
+        filename=f"{slug}.csv",
         headers={
-            "Content-Disposition": f'attachment; filename="{slug}.csv"',
             "X-Datavis-Cache": cache_status,
             "X-Datavis-Generated-At": cached.generated_at.isoformat(),
         },

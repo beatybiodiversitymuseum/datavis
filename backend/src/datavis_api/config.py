@@ -20,7 +20,6 @@ class Settings:
     datasets_path: Path
     specify_settings_path: Path
     specify_collection_id: int
-    max_csv_rows: int
 
     @classmethod
     def from_environment(cls) -> "Settings":
@@ -38,17 +37,16 @@ class Settings:
         )
         try:
             collection_id = int(os.environ["SPECIFY_COLLECTION_ID"])
-            max_csv_rows = int(os.environ.get("DATAVIS_MAX_CSV_ROWS", "100000"))
             cache_ttl_seconds = int(
                 os.environ.get("DATAVIS_CACHE_TTL_SECONDS", "86400")
             )
         except (KeyError, ValueError) as error:
             raise ConfigurationError(
-                "collection ID, row limit, and cache TTL must be integers"
+                "collection ID and cache TTL must be integers"
             ) from error
-        if collection_id < 1 or max_csv_rows < 1 or cache_ttl_seconds < 1:
+        if collection_id < 1 or cache_ttl_seconds < 1:
             raise ConfigurationError(
-                "collection ID, maximum CSV rows, and cache TTL must be positive"
+                "collection ID and cache TTL must be positive"
             )
         return cls(
             state_dir=Path(state_dir),
@@ -57,7 +55,6 @@ class Settings:
             datasets_path=datasets_path,
             specify_settings_path=specify_settings_path,
             specify_collection_id=collection_id,
-            max_csv_rows=max_csv_rows,
         )
 
 

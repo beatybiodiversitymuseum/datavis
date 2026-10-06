@@ -66,7 +66,7 @@ git diff --check
 
 The controller supplies externally managed `SPECIFY_USERNAME` and `SPECIFY_PASSWORD` to `datavis_api`. It allocates `SPECIFY_COLLECTION_ID`, both loopback ports, and the private backend URL. Ansible generates one internal `datavis_api_api_token` and maps it to `DATAVIS_API_API_TOKEN` in the backend and `DATAVIS_BACKEND_TOKEN` in the frontend.
 
-Responses are bounded by `DATAVIS_MAX_CSV_ROWS` (100,000 by default). The backend rejects unlisted slugs and strips Specify's internal record ID from the CSV. Query headers come from the saved query's own displayed-field metadata; no Darwin Core transformation is performed.
+The backend does not impose a row limit: the reviewed saved query controls the result size as well as its displayed fields and order. The backend rejects unlisted slugs, strips Specify's internal record ID, validates unique headers and row widths, and writes each result directly to an atomic disk cache without assembling the CSV in memory. No Darwin Core transformation is performed.
 
 The backend keeps the last successful CSV for each dataset under
 `/var/lib/datavis-api/cache`. Cached data is fresh for 24 hours, controlled by
@@ -77,6 +77,12 @@ unavailable. Response headers report `X-Datavis-Cache` as `HIT`, `MISS`, or
 published dataset nightly at 03:15 America/Vancouver with up to 30 minutes of
 random delay; timer failures remain visible to operators while the prior cache
 is preserved.
+
+Refreshes use a per-dataset filesystem lock shared by the API and nightly
+refresh process. The prior cache remains active until a complete replacement
+has been flushed to disk and atomically installed. Streamlit downloads the CSV
+to a temporary file before pandas parses it, avoiding a second complete
+in-memory response buffer.
 
 ## Production deployment
 
