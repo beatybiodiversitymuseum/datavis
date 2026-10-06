@@ -17,10 +17,12 @@ deployment:
 
   generated_secret_env:
     datavis_api_api_token: DATAVIS_API_API_TOKEN
+    specify_metadata_api_token: SPECIFY_METADATA_API_TOKEN
 
   allocation_env:
     bind_host: DATAVIS_API_HOST
     app_port: DATAVIS_API_PORT
     specify_collection_id: SPECIFY_COLLECTION_ID
+    metadata_url: SPECIFY_METADATA_URL
 
   secrets_required: true

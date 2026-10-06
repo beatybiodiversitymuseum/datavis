@@ -36,7 +36,7 @@ def serve(settings: Settings) -> None:
         "-m",
         "streamlit",
         "run",
-        f"{root}/app.py",
+        f"{root}/Home.py",
         "--server.headless=true",
         f"--server.address={settings.host}",
         f"--server.port={settings.port}",

@@ -6,6 +6,8 @@ from datavis_api import cli
 def configure(monkeypatch, tmp_path):
     monkeypatch.setenv("DATAVIS_API_STATE_DIR", str(tmp_path))
     monkeypatch.setenv("SPECIFY_COLLECTION_ID", "1")
+    monkeypatch.setenv("SPECIFY_METADATA_URL", "http://metadata")
+    monkeypatch.setenv("SPECIFY_METADATA_API_TOKEN", "metadata-token")
 
 
 def test_initialize_command_loads_settings_and_initializes(monkeypatch, tmp_path):

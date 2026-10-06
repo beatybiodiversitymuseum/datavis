@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from datavis_api.config import ConfigurationError, load_datasets
-from datavis_api.csv_export import write_query_csv
+from datavis_api.csv_export import query_columns, write_query_csv
 
 
 class Response:
@@ -29,6 +29,30 @@ def test_renders_query_without_internal_record_id():
     output = io.StringIO(newline="")
     write_query_csv(Client(), 42, output)
     assert output.getvalue() == "1.name\r\nOak\r\n"
+
+
+def test_preserves_alias_but_retains_string_id_for_metadata():
+    class AliasedResponse(Response):
+        def json(self):
+            return {
+                "fields": [
+                    {
+                        "isdisplay": True,
+                        "position": 0,
+                        "stringid": "1.name",
+                        "columnalias": "Specimen Name",
+                    }
+                ]
+            }
+
+    class AliasedClient(Client):
+        def get(self, path):
+            return AliasedResponse()
+
+    column = query_columns(AliasedClient(), 42)[0]
+
+    assert column.header == "Specimen Name"
+    assert column.string_id == "1.name"
 
 
 def test_writes_more_than_one_hundred_thousand_rows():

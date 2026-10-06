@@ -10,6 +10,7 @@ The browser never receives Specify credentials, the private API URL, its service
 browser -> nginx /datavis -> Streamlit (datavis)
                               -> private FastAPI (datavis-api)
                                    -> specify-client -> Specify saved query
+                                   -> specify-metadata-service -> localized field labels
 ```
 
 - `frontend/`: public multipage Streamlit host. Add one file under `pages/` for each visualization application and reuse `datavis.ui.dataset_client()`.
@@ -67,6 +68,12 @@ git diff --check
 The controller supplies externally managed `SPECIFY_USERNAME` and `SPECIFY_PASSWORD` to `datavis_api`. It allocates `SPECIFY_COLLECTION_ID`, both loopback ports, and the private backend URL. Ansible generates one internal `datavis_api_api_token` and maps it to `DATAVIS_API_API_TOKEN` in the backend and `DATAVIS_BACKEND_TOKEN` in the frontend.
 
 The backend does not impose a row limit: the reviewed saved query controls the result size as well as its displayed fields and order. The backend rejects unlisted slugs, strips Specify's internal record ID, validates unique headers and row widths, and writes each result directly to an atomic disk cache without assembling the CSV in memory. No Darwin Core transformation is performed.
+
+Query Explorer obtains collection-specific table, relationship, field, and
+tree-rank labels from `specify-metadata-service`; Datavis does not embed or
+infer Specify schema labels. If that dependency is temporarily unavailable,
+the CSV remains usable and Query Explorer explicitly falls back to the saved
+query names.
 
 The backend keeps the last successful CSV for each dataset under
 `/var/lib/datavis-api/cache`. Cached data is fresh for 24 hours, controlled by

@@ -4,6 +4,7 @@ import hmac
 import logging
 import os
 
+import requests
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse
 
@@ -16,7 +17,8 @@ from .cache import (
 )
 from .config import Dataset, Settings, load_datasets
 from .connections import get_specify_client
-from .csv_export import ExportError, write_query_csv
+from .csv_export import ExportError, query_columns, write_query_csv
+from .metadata import MetadataClient, MetadataError
 
 app = FastAPI(title='Private allowlisted Specify query CSV API for Datavis applications')
 logger = logging.getLogger(__name__)
@@ -99,6 +101,32 @@ def list_datasets() -> list[dict[str, str]]:
         {"slug": item.slug, "title": item.title, "description": item.description}
         for item in load_datasets(settings.datasets_path).values()
     ]
+
+
+@app.get(
+    "/v1/datasets/{slug}/columns", dependencies=[Depends(require_service_token)]
+)
+def dataset_columns(slug: str) -> list[dict[str, str]]:
+    settings = Settings.from_environment()
+    dataset = load_datasets(settings.datasets_path).get(slug)
+    if dataset is None:
+        raise HTTPException(status_code=404, detail="dataset is not published")
+    try:
+        columns = query_columns(get_specify_client(settings), dataset.query_id)
+        metadata = MetadataClient(
+            settings.metadata_url,
+            settings.metadata_token,
+            settings.specify_collection_id,
+        )
+        return [
+            {
+                "source": column.header,
+                "label": metadata.column_label(column.string_id),
+            }
+            for column in columns
+        ]
+    except (ExportError, MetadataError, requests.RequestException) as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
 
 
 @app.get("/v1/datasets/{slug}.csv", dependencies=[Depends(require_service_token)])

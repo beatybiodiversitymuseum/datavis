@@ -22,9 +22,13 @@ st.markdown(
 
 flow_query, flow_csv, flow_app = st.columns(3)
 flow_query.subheader("1. Reviewed query")
-flow_query.write("A numbered Specify query defines the records and fields intended for the visualization.")
+flow_query.write(
+    "A numbered Specify query defines the records and fields intended for the visualization."
+)
 flow_csv.subheader("2. Structured CSV")
-flow_csv.write("The query result is checked against the app's expected columns and delivered as CSV.")
+flow_csv.write(
+    "The query result is checked against the app's expected columns and delivered as CSV."
+)
 flow_app.subheader("3. Streamlit app")
 flow_app.write("A focused app turns that dataset into useful interactive views.")
 
@@ -47,4 +51,6 @@ else:
     st.write("Choose an application from the sidebar. Available datasets:")
     for dataset in datasets:
         st.subheader(dataset["title"])
-        st.write(dataset.get("description") or "A reviewed Specify saved-query dataset.")
+        st.write(
+            dataset.get("description") or "A reviewed Specify saved-query dataset."
+        )

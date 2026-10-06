@@ -11,6 +11,7 @@ dependencies = [
     "fastapi>=0.115,<1",
     "python-dotenv>=1,<2",
     "pyyaml>=6,<7",
+    "requests>=2.32,<3",
     "specify-client @ git+https://github.com/beatybiodiversitymuseum/specify-client.git@v0.6.0",
     "uvicorn[standard]>=0.34,<1",
 ]

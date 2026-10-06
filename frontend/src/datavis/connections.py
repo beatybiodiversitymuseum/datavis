@@ -30,3 +30,10 @@ class DatasetClient:
                         csv_file.write(chunk)
                 csv_file.seek(0)
                 return pd.read_csv(csv_file)
+
+    def column_labels(self, slug: str) -> dict[str, str]:
+        response = self.session.get(
+            f"{self.base_url}/v1/datasets/{slug}/columns", timeout=30
+        )
+        response.raise_for_status()
+        return {item["source"]: item["label"] for item in response.json()}

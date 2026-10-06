@@ -23,6 +23,14 @@ class StreamingResponse:
         yield b"Oak,2\n"
 
 
+class JsonResponse:
+    def raise_for_status(self):
+        return None
+
+    def json(self):
+        return [{"source": "1.name", "label": "Name"}]
+
+
 def test_dataframe_streams_csv_to_a_temporary_file(monkeypatch):
     client = DatasetClient(
         SimpleNamespace(backend_url="http://backend", backend_token="token")
@@ -40,3 +48,12 @@ def test_dataframe_streams_csv_to_a_temporary_file(monkeypatch):
 
     assert response.iterated
     assert frame.to_dict(orient="records") == [{"name": "Oak", "count": 2}]
+
+
+def test_column_labels_are_keyed_by_source_header(monkeypatch):
+    client = DatasetClient(
+        SimpleNamespace(backend_url="http://backend", backend_token="token")
+    )
+    monkeypatch.setattr(client.session, "get", lambda *args, **kwargs: JsonResponse())
+
+    assert client.column_labels("plants") == {"1.name": "Name"}

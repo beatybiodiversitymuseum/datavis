@@ -20,6 +20,8 @@ class Settings:
     datasets_path: Path
     specify_settings_path: Path
     specify_collection_id: int
+    metadata_url: str
+    metadata_token: str
 
     @classmethod
     def from_environment(cls) -> "Settings":
@@ -35,6 +37,12 @@ class Settings:
         specify_settings_path = Path(
             os.environ.get("SPECIFY_SETTINGS_PATH", "config/specify.yaml")
         )
+        metadata_url = os.environ.get("SPECIFY_METADATA_URL", "").rstrip("/")
+        metadata_token = os.environ.get("SPECIFY_METADATA_API_TOKEN", "")
+        if not metadata_url or not metadata_token:
+            raise ConfigurationError(
+                "SPECIFY_METADATA_URL and SPECIFY_METADATA_API_TOKEN are required"
+            )
         try:
             collection_id = int(os.environ["SPECIFY_COLLECTION_ID"])
             cache_ttl_seconds = int(
@@ -55,6 +63,8 @@ class Settings:
             datasets_path=datasets_path,
             specify_settings_path=specify_settings_path,
             specify_collection_id=collection_id,
+            metadata_url=metadata_url,
+            metadata_token=metadata_token,
         )
 
 

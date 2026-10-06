@@ -9,12 +9,15 @@ def test_settings_load_from_environment(monkeypatch):
     monkeypatch.setenv("DATAVIS_API_STATE_DIR", "/tmp/service-state")
     monkeypatch.setenv("DATAVIS_API_LOG_LEVEL", "debug")
     monkeypatch.setenv("SPECIFY_COLLECTION_ID", "1")
+    monkeypatch.setenv("SPECIFY_METADATA_URL", "http://metadata")
+    monkeypatch.setenv("SPECIFY_METADATA_API_TOKEN", "metadata-token")
 
     settings = Settings.from_environment()
 
     assert settings.state_dir == Path("/tmp/service-state")
     assert settings.log_level == "DEBUG"
     assert settings.cache_ttl_seconds == 86400
+    assert settings.metadata_url == "http://metadata"
 
 
 def test_state_dir_is_required(monkeypatch):
@@ -28,6 +31,8 @@ def test_log_level_is_validated(monkeypatch):
     monkeypatch.setenv("DATAVIS_API_STATE_DIR", "/tmp/service-state")
     monkeypatch.setenv("DATAVIS_API_LOG_LEVEL", "verbose")
     monkeypatch.setenv("SPECIFY_COLLECTION_ID", "1")
+    monkeypatch.setenv("SPECIFY_METADATA_URL", "http://metadata")
+    monkeypatch.setenv("SPECIFY_METADATA_API_TOKEN", "metadata-token")
 
     with pytest.raises(ConfigurationError, match="standard logging level"):
         Settings.from_environment()

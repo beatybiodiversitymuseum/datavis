@@ -8,6 +8,11 @@ apply_branding()
 st.title("Query Explorer")
 client = dataset_client()
 
+
+@st.cache_data(ttl=86400, show_spinner=False)
+def column_labels(slug: str) -> dict[str, str]:
+    return dataset_client().column_labels(slug)
+
 try:
     datasets = client.list_datasets()
 except Exception:
@@ -27,6 +32,12 @@ try:
 except Exception:
     st.error("This dataset could not be loaded.")
     st.stop()
+
+try:
+    labels = column_labels(selected["slug"])
+    frame = frame.rename(columns=labels)
+except Exception:
+    st.warning("Field labels are temporarily unavailable; showing saved-query names.")
 
 st.metric("Rows", f"{len(frame):,}")
 st.dataframe(frame, use_container_width=True, hide_index=True)
