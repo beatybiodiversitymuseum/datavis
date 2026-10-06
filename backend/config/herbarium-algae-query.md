@@ -2,8 +2,9 @@
 
 Specify saved query `685` in collection `Algae` (`collection ID 32768`) uses
 Collection Object as the base table. The query must return one row per specimen
-and expose these displayed fields in this exact order. `datasets.yaml` records
-their exact Specify field identifiers and maps them to these public CSV names:
+and currently exposes these displayed fields. The saved query is the live CSV
+schema: adding, removing, renaming, or reordering its displayed fields changes
+the next refreshed CSV without a code or allowlist change.
 
 | Alias | Schema Explorer path | Specify label | Purpose |
 |---|---|---|---|
@@ -28,5 +29,5 @@ Before enabling it:
 3. Run the query and compare representative values with `algae.csv` from
    `beatybiodiversitymuseum/Herbarium_Dashboard`.
 4. Set its positive saved-query ID in `datasets.yaml` and change `enabled` to
-   `true`. The backend will reject a result whose columns differ from the exact
-   contract above.
+   `true`. The backend accepts the query's current displayed columns, while
+   still rejecting duplicate headers, excessive rows, and unlisted query IDs.

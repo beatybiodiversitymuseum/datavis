@@ -48,8 +48,6 @@ def cached_dataset_csv(
                 get_specify_client(settings),
                 dataset.query_id,
                 settings.max_csv_rows,
-                dataset.source_columns,
-                dataset.required_columns,
             )
             return write_cached_csv(settings.state_dir, dataset.slug, content), "MISS"
         except Exception:

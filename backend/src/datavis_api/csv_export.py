@@ -8,13 +8,7 @@ class ExportError(RuntimeError):
     """Raised when Specify returns an unsafe or inconsistent query result."""
 
 
-def render_query_csv(
-    client,
-    query_id: int,
-    max_rows: int,
-    source_columns: tuple[str, ...] = (),
-    output_columns: tuple[str, ...] = (),
-) -> bytes:
+def render_query_csv(client, query_id: int, max_rows: int) -> bytes:
     response = client.get(f"/api/specify/spquery/{query_id}/")
     response.raise_for_status()
     fields = sorted(
@@ -27,17 +21,9 @@ def render_query_csv(
     ]
     if not headers or len(headers) != len(set(headers)):
         raise ExportError("saved query must expose unique displayed columns")
-    if source_columns and tuple(headers) != source_columns:
-        raise ExportError(
-            "saved query columns do not match the reviewed dataset contract"
-        )
-    csv_headers = output_columns or tuple(headers)
-    if len(csv_headers) != len(headers) or len(csv_headers) != len(set(csv_headers)):
-        raise ExportError("reviewed CSV columns must be unique and match the saved query")
-
     output = io.StringIO(newline="")
     writer = csv.writer(output)
-    writer.writerow(csv_headers)
+    writer.writerow(headers)
     for row_number, row in enumerate(client.stored_query_rows(query_id), start=1):
         if row_number > max_rows:
             raise ExportError(f"saved query exceeds the configured {max_rows} row limit")
