@@ -70,10 +70,11 @@ The controller supplies externally managed `SPECIFY_USERNAME` and `SPECIFY_PASSW
 The backend does not impose a row limit: the reviewed saved query controls the result size as well as its displayed fields and order. The backend rejects unlisted slugs, strips Specify's internal record ID, validates unique headers and row widths, and writes each result directly to an atomic disk cache without assembling the CSV in memory. No Darwin Core transformation is performed.
 
 Query Explorer obtains collection-specific table, relationship, field, and
-tree-rank labels from `specify-metadata-service`; Datavis does not embed or
-infer Specify schema labels. If that dependency is temporarily unavailable,
-the CSV remains usable and Query Explorer explicitly falls back to the saved
-query names.
+tree-rank labels from the public read-only `specify-metadata-service` API;
+Datavis does not embed or infer Specify schema labels and does not hold an
+internal metadata-service credential. If that dependency is temporarily
+unavailable, the CSV remains usable and Query Explorer explicitly falls back
+to the saved query names.
 
 The backend keeps the last successful CSV for each dataset under
 `/var/lib/datavis-api/cache`. Cached data is fresh for 24 hours, controlled by

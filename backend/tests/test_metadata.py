@@ -13,7 +13,8 @@ class Response:
 
 
 def test_localizes_relationship_path_and_field(monkeypatch):
-    client = MetadataClient("http://metadata", "token", 32768)
+    client = MetadataClient("http://metadata", 32768)
+    assert "Authorization" not in client.session.headers
     responses = iter(
         [
             {
@@ -39,7 +40,7 @@ def test_localizes_relationship_path_and_field(monkeypatch):
 
 
 def test_uses_tree_rank_label_instead_of_full_name(monkeypatch):
-    client = MetadataClient("http://metadata", "token", 32768)
+    client = MetadataClient("http://metadata", 32768)
     responses = iter(
         [
             {

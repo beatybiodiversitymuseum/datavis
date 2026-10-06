@@ -10,7 +10,6 @@ def test_settings_load_from_environment(monkeypatch):
     monkeypatch.setenv("DATAVIS_API_LOG_LEVEL", "debug")
     monkeypatch.setenv("SPECIFY_COLLECTION_ID", "1")
     monkeypatch.setenv("SPECIFY_METADATA_URL", "http://metadata")
-    monkeypatch.setenv("SPECIFY_METADATA_API_TOKEN", "metadata-token")
 
     settings = Settings.from_environment()
 
@@ -32,7 +31,6 @@ def test_log_level_is_validated(monkeypatch):
     monkeypatch.setenv("DATAVIS_API_LOG_LEVEL", "verbose")
     monkeypatch.setenv("SPECIFY_COLLECTION_ID", "1")
     monkeypatch.setenv("SPECIFY_METADATA_URL", "http://metadata")
-    monkeypatch.setenv("SPECIFY_METADATA_API_TOKEN", "metadata-token")
 
     with pytest.raises(ConfigurationError, match="standard logging level"):
         Settings.from_environment()

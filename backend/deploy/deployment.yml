@@ -17,7 +17,6 @@ deployment:
 
   generated_secret_env:
     datavis_api_api_token: DATAVIS_API_API_TOKEN
-    specify_metadata_api_token: SPECIFY_METADATA_API_TOKEN
 
   allocation_env:
     bind_host: DATAVIS_API_HOST

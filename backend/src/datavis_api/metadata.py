@@ -12,11 +12,10 @@ class MetadataError(RuntimeError):
 
 
 class MetadataClient:
-    def __init__(self, base_url: str, token: str, collection_id: int):
+    def __init__(self, base_url: str, collection_id: int):
         self.base_url = base_url.rstrip("/")
         self.collection_id = collection_id
         self.session = requests.Session()
-        self.session.headers["Authorization"] = f"Bearer {token}"
 
     def _get(self, path: str, **parameters):
         response = self.session.get(

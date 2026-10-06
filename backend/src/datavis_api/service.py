@@ -115,7 +115,6 @@ def dataset_columns(slug: str) -> list[dict[str, str]]:
         columns = query_columns(get_specify_client(settings), dataset.query_id)
         metadata = MetadataClient(
             settings.metadata_url,
-            settings.metadata_token,
             settings.specify_collection_id,
         )
         return [
