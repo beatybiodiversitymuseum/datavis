@@ -98,6 +98,39 @@ def test_scheduled_refresh_reports_failure(monkeypatch, tmp_path):
         )
 
 
+def test_scheduled_refresh_attempts_every_dataset_before_reporting_failures(
+    monkeypatch, tmp_path
+):
+    registry = tmp_path / "datasets.yaml"
+    registry.write_text(
+        "datasets:\n"
+        "  broken:\n"
+        "    title: Broken\n"
+        "    query_id: 41\n"
+        "  healthy:\n"
+        "    title: Healthy\n"
+        "    query_id: 42\n"
+    )
+    configured = settings(tmp_path)
+    configured.datasets_path = registry
+    attempted = []
+
+    def refresh(settings, dataset, **kwargs):
+        attempted.append(dataset.slug)
+        if dataset.slug == "broken":
+            raise RuntimeError("Specify unavailable")
+
+    monkeypatch.setattr(service, "cached_dataset_csv", refresh)
+
+    with pytest.raises(ExceptionGroup, match="dataset refreshes failed") as raised:
+        service.refresh_all_datasets(configured)
+
+    assert attempted == ["broken", "healthy"]
+    assert [str(error) for error in raised.value.exceptions] == [
+        "Specify unavailable"
+    ]
+
+
 def test_interrupted_write_preserves_previous_cache(tmp_path):
     write_cached_csv(tmp_path, "plants", b"name\r\nOld oak\r\n")
 

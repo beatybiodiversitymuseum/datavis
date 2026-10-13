@@ -65,8 +65,15 @@ def cached_dataset_csv(
 
 
 def refresh_all_datasets(settings: Settings) -> None:
+    failures = []
     for dataset in load_datasets(settings.datasets_path).values():
-        cached_dataset_csv(settings, dataset, force=True, allow_stale=False)
+        try:
+            cached_dataset_csv(settings, dataset, force=True, allow_stale=False)
+        except Exception as error:
+            logger.exception("Scheduled refresh failed for %s", dataset.slug)
+            failures.append(error)
+    if failures:
+        raise ExceptionGroup("one or more dataset refreshes failed", failures)
 
 
 def require_service_token(
