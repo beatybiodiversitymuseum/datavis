@@ -24,19 +24,14 @@ def _field_tokens(column: str) -> list[str]:
     return re.findall(r"[a-z]+", separated.casefold())
 
 
-def _source_fields(
-    columns: pd.Index, labels: dict[str, str] | None = None
-) -> dict[str, str]:
+def _source_fields(columns: pd.Index, labels: dict[str, str]) -> dict[str, str]:
     selected = {}
     for role in ("latitude", "longitude", "genus", "species", "state"):
         matches = []
         for column in columns:
-            names = (str(column), (labels or {}).get(str(column), ""))
-            for name in names:
-                tokens = _field_tokens(name)
-                if tokens[-1:] == [role] or tokens[-3:] == [role, "full", "name"]:
-                    matches.append(str(column))
-                    break
+            tokens = _field_tokens(labels.get(str(column), ""))
+            if tokens[-1:] == [role] or tokens[-3:] == [role, "full", "name"]:
+                matches.append(str(column))
         if len(matches) == 1:
             selected[role] = matches[0]
         elif len(matches) > 1:
@@ -48,7 +43,7 @@ def _source_fields(
 
 
 def matched_occurrences(
-    source: pd.DataFrame, grid: pd.DataFrame, labels: dict[str, str] | None = None
+    source: pd.DataFrame, grid: pd.DataFrame, labels: dict[str, str]
 ) -> pd.DataFrame:
     fields = _source_fields(source.columns, labels)
     records = source.loc[

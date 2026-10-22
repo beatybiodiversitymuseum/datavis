@@ -10,5 +10,5 @@ datasets:
   algae-sdm-occurrences:
     enabled: true
     query_id: 707
-    title: Algae species distribution teaching data
-    description: Reviewed algae taxonomy, locality, and coordinates for a marine climate teaching example.
+    title: Algae occurrence records
+    description: Algae identifications and collection locations.

@@ -29,7 +29,8 @@ def test_occurrences_match_ocean_cells_once_and_exclude_unmatched_records():
         "State - Full Name": ["British Columbia"] * 4 + ["Alaska"],
     })
 
-    matched = matched_occurrences(source, grid)
+    labels = {column: column for column in source.columns}
+    matched = matched_occurrences(source, grid, labels)
 
     assert len(matched) == 3
     assert matched["baseline_c"].count() == 2
@@ -49,7 +50,14 @@ def test_occurrences_accept_saved_query_source_field_names():
         "1,10,2,3.geography.State.fullName": ["British Columbia"],
     })
 
-    matched = matched_occurrences(source, grid)
+    labels = {
+        "1,10,2.locality.latitude1": "Locality › Latitude",
+        "1,10,2.locality.longitude1": "Locality › Longitude",
+        "1,5.taxon.Genus.fullName": "Taxon › Genus › Full Name",
+        "1,5.taxon.Species.fullName": "Taxon › Species › Full Name",
+        "1,10,2,3.geography.State.fullName": "Geography › State › Full Name",
+    }
+    matched = matched_occurrences(source, grid, labels)
 
     assert matched["species"].tolist() == ["Fucus gardneri"]
     assert matched["baseline_c"].tolist() == [10.0]
@@ -73,6 +81,12 @@ def test_occurrences_can_use_collection_field_labels():
         "path.five": "Geography › State › Full Name",
     }
     assert matched_occurrences(source, grid, labels)["species"].tolist() == ["Fucus gardneri"]
+
+
+def test_occurrences_do_not_guess_roles_from_source_paths_without_metadata():
+    source = pd.DataFrame({"1,10,2.locality.latitude1": [48.025]})
+    with pytest.raises(ValueError, match="missing fields"):
+        matched_occurrences(source, pd.DataFrame(), {})
 
 
 def test_temperature_envelope_requires_fifty_matched_cells():

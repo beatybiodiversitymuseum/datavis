@@ -27,29 +27,10 @@ st.markdown(
 
 st.title("UBC Herbarium Explorer")
 st.write(
-    "This worked example starts with the reviewed UBC Herbarium algae saved query. "
-    "Streamlit adds linked filters, live summaries, charts, a map, a table, and a "
-    "download—all from the query's displayed fields."
+    "Explore algae specimens in the UBC Herbarium. Filter by collector, place, "
+    "and year to see how the summaries, charts, map, and table change."
 )
-with st.expander("What comes from Specify, and what does Streamlit add?"):
-    specify_column, streamlit_column = st.columns(2)
-    with specify_column:
-        st.markdown("**Specify saved query**")
-        st.markdown(
-            "- Selects the algae specimen records\n"
-            "- Supplies catalog, date, collector, locality, and coordinate fields\n"
-            "- Remains the source of the data shown here"
-        )
-    with streamlit_column:
-        st.markdown("**Streamlit page**")
-        st.markdown(
-            "- Filters the returned rows interactively\n"
-            "- Recalculates metrics and charts\n"
-            "- Maps coordinates and downloads the filtered result"
-        )
-st.info(
-    "This dashboard currently represents the algae portion of the UBC Herbarium collection."
-)
+st.info("These records cover the algae portion of the UBC Herbarium collection.")
 
 
 @st.cache_data(ttl=86400, show_spinner="Loading collection data…")
@@ -59,20 +40,19 @@ def load_data() -> pd.DataFrame:
 
 try:
     df = load_data()
-except HerbariumSchemaError as error:
-    st.error(f"The saved query does not currently match this dashboard: {error}")
+except HerbariumSchemaError:
+    st.error("The specimen data is temporarily unavailable.")
     st.stop()
 except Exception:
     st.error("The Herbarium dataset could not be loaded.")
     st.stop()
 
 if df.empty:
-    st.info("The Herbarium query returned no specimens.")
+    st.info("No algae specimens are available right now.")
     st.stop()
 
 st.sidebar.title("🌿 Herbarium Explorer")
-st.sidebar.caption("A worked example built from one reviewed Specify saved query")
-st.sidebar.markdown("### Filter the query result")
+st.sidebar.markdown("### Filter specimens")
 
 collectors = sorted(df["full_name"].dropna().unique())
 countries = sorted(value for value in df["country"].unique() if value != "Unknown")
@@ -120,7 +100,7 @@ st.markdown(
     f"""<div style="background:#1f2e1f;border-radius:10px;padding:1.2rem 2rem;
     margin-bottom:1.2rem;color:#d4e8d4">
     <span style="font-size:2.6rem;font-weight:600">{total_collection:,}</span><br>
-    Total physical specimens in the collection · {len(df):,} algae query rows
+    Total physical specimens in the collection · {len(df):,} algae records
     </div>""",
     unsafe_allow_html=True,
 )
@@ -152,7 +132,7 @@ st.bar_chart(collector_counts.head(top_collectors), horizontal=True)
 
 st.markdown("---")
 st.subheader("Collection Activity")
-st.caption("Collection dates from the saved query are grouped by year.")
+st.caption("Specimens are grouped by collection year.")
 dated = filtered.dropna(subset=["year"]).copy()
 if dated.empty:
     st.info("No dated specimens match the current filters.")
@@ -192,7 +172,7 @@ else:
 
 st.markdown("---")
 st.subheader("Geographic Distribution")
-st.caption("The map uses latitude and longitude fields returned by the saved query.")
+st.caption("Each point shows a specimen with recorded coordinates.")
 map_data = filtered.dropna(subset=["latitude", "longitude"])[
     ["latitude", "longitude"]
 ]

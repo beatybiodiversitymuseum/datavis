@@ -6,68 +6,33 @@ from datavis.ui import apply_branding, dataset_client
 st.set_page_config(page_title="Beaty Data Visualizations", page_icon="📊", layout="wide")
 apply_branding()
 st.title("Beaty Data Visualizations")
-st.subheader("From a reviewed Specify query to an interactive public view")
-
-st.markdown(
-    """
-    **Specify decides what data is included.** A collection manager creates a
-    saved query that selects the records and fields needed to answer a question.
-    Those fields are reviewed before the query is published here.
-
-    **Streamlit decides how people can explore it.** The reviewed query result
-    becomes an interactive page with filters, summaries, charts, maps, tables,
-    and downloads. Streamlit cannot request a different Specify query or expose
-    collection credentials.
-    """
-)
-
-st.markdown("#### 1. Define the dataset in Specify")
-st.write(
-    "A saved query controls which specimen records appear and which columns leave Specify."
-)
-st.markdown("#### 2. Review and publish the query")
-st.write(
-    "Museum staff review the displayed fields, then publish that query as a named dataset."
-)
-st.markdown("#### 3. Explore the result in Streamlit")
-st.write(
-    "A focused app can filter, summarize, chart, map, display, and download the reviewed rows."
-)
+st.write("Explore UBC Herbarium specimens, browse museum records, and compare ocean temperatures for an algae species.")
 
 st.divider()
-st.header("Two ways to explore")
-explorer_column, example_column = st.columns(2)
+st.header("Explore")
+explorer_column, herbarium_column, climate_column = st.columns(3)
 with explorer_column:
-    st.subheader("🔎 Query Explorer")
+    st.subheader("🔎 Browse records")
     st.write(
-        "See a reviewed saved query much as it leaves Specify: one row per result "
-        "and one column per displayed query field. This is the best place to check "
-        "what data is available before designing a visualization."
+        "Choose a museum dataset to inspect its records, collection dates, and locations."
     )
-    st.page_link("pages/01_Query_Explorer.py", label="Open Query Explorer", icon="🔎")
-with example_column:
+    st.page_link("pages/01_Browse_Records.py", label="Browse records", icon="🔎")
+with herbarium_column:
     st.subheader("🌿 Herbarium Explorer")
     st.write(
-        "See what Streamlit can add to one saved query: linked filters, live counts, "
-        "charts, a map, a searchable table, and a filtered CSV download."
+        "Filter algae specimens by collector, place, and year. Explore summaries, a map, and a table."
     )
     st.page_link(
-        "pages/02_Herbarium_Dashboard.py", label="Open the worked example", icon="🌿"
+        "pages/02_Herbarium_Dashboard.py", label="Explore specimens", icon="🌿"
     )
-
-st.subheader("🌊 Algae Climate Explorer")
-st.write(
-    "Try a classroom sea temperature envelope using reviewed algae occurrences "
-    "and Bio-ORACLE present and future marine climate grids."
-)
-st.page_link(
-    "pages/03_Algae_Climate_Explorer.py", label="Open the climate example", icon="🌊"
-)
-
-st.info(
-    "Want to build another view? Start with the question you want to answer and a "
-    "Specify saved query containing only the records and fields approved for public use."
-)
+with climate_column:
+    st.subheader("🌊 Algae and ocean temperature")
+    st.write(
+        "Compare present and future ocean temperatures with those observed near *Fucus gardneri* records."
+    )
+    st.page_link(
+        "pages/03_Algae_Climate_Explorer.py", label="Compare temperatures", icon="🌊"
+    )
 
 st.divider()
 
@@ -78,14 +43,9 @@ except Exception:
     st.stop()
 
 if not datasets:
-    st.info("The first reviewed visualization is being prepared.")
+    st.info("No museum datasets are available right now.")
 else:
-    st.header("Published datasets")
-    st.caption(
-        "Each dataset below is backed by a fixed, reviewed Specify saved query."
-    )
+    st.header("Available datasets")
     for dataset in datasets:
         st.subheader(dataset["title"])
-        st.write(
-            dataset.get("description") or "A reviewed Specify saved-query dataset."
-        )
+        st.write(dataset.get("description") or "Museum records available to explore.")
