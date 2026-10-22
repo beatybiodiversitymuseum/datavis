@@ -1,4 +1,7 @@
+import logging
+
 import pydeck as pdk
+import requests
 import streamlit as st
 
 from datavis.algae_sdm import (
@@ -10,6 +13,7 @@ from datavis.algae_sdm import (
 from datavis.ui import apply_branding, dataset_client
 
 
+logger = logging.getLogger(__name__)
 st.set_page_config(page_title="Algae Climate Explorer", page_icon="🌊", layout="wide")
 apply_branding()
 st.title("Algae Climate Explorer")
@@ -32,9 +36,37 @@ def load_grid():
 
 try:
     grid = load_grid()
-    records = matched_occurrences(load_occurrences(), grid)
 except Exception:
-    st.error("The reviewed occurrence data or marine temperature grid is unavailable.")
+    logger.exception("Marine temperature grid could not be loaded")
+    st.error("The marine temperature grid is missing or unreadable in this deployment.")
+    st.stop()
+
+try:
+    occurrences = load_occurrences()
+except requests.HTTPError as error:
+    logger.exception("Algae occurrence dataset request failed")
+    status = error.response.status_code if error.response is not None else None
+    if status == 404:
+        st.error("The algae occurrence dataset is not published by the private data service yet. Deploy the updated backend first.")
+    elif status == 502:
+        st.error("The private data service could not refresh the algae occurrence dataset. Check the backend service logs.")
+    else:
+        st.error("The private data service rejected the algae occurrence dataset request. Check the backend service logs.")
+    st.stop()
+except Exception:
+    logger.exception("Algae occurrence dataset could not be loaded")
+    st.error("The algae occurrence dataset could not be loaded from the private data service.")
+    st.stop()
+
+try:
+    records = matched_occurrences(occurrences, grid)
+except ValueError as error:
+    logger.exception("Algae occurrence dataset schema is incompatible")
+    st.error(str(error))
+    st.stop()
+except Exception:
+    logger.exception("Algae occurrence dataset could not be matched to the marine grid")
+    st.error("The algae occurrence dataset could not be matched to the marine grid. Check the frontend service logs.")
     st.stop()
 
 species = "Fucus gardneri"

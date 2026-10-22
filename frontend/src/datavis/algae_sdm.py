@@ -25,7 +25,7 @@ def matched_occurrences(source: pd.DataFrame, grid: pd.DataFrame) -> pd.DataFram
     )
     missing = [column for column in required if column not in source]
     if missing:
-        raise ValueError("query 707 is missing displayed fields: " + ", ".join(missing))
+        raise ValueError("Occurrence dataset is missing fields: " + ", ".join(missing))
 
     records = source.loc[source["State - Full Name"].eq("British Columbia"), list(required)].copy()
     records["Latitude"] = pd.to_numeric(records["Latitude"], errors="coerce")
