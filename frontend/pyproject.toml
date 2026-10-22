@@ -22,5 +22,8 @@ datavis = "datavis.cli:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+datavis = ["data/*.csv"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -1,7 +1,18 @@
 import pandas as pd
 import pytest
 
-from datavis.algae_sdm import matched_occurrences, suitability, temperature_envelope
+from datavis.algae_sdm import (
+    load_temperature_grid,
+    matched_occurrences,
+    suitability,
+    temperature_envelope,
+)
+
+
+def test_packaged_temperature_grid_has_both_periods():
+    grid = load_temperature_grid()
+    assert len(grid) == 42_679
+    assert grid[["baseline_c", "ssp245_2050_c"]].notna().all().all()
 
 
 def test_occurrences_match_ocean_cells_once_and_exclude_unmatched_records():

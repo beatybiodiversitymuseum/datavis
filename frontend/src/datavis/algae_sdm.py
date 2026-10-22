@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 
 
-GRID_PATH = Path(__file__).resolve().parents[2] / "data" / "bio_oracle_bc_surface_temperature.csv"
+GRID_PATH = Path(__file__).resolve().parent / "data" / "bio_oracle_bc_surface_temperature.csv"
 CELL_SIZE = 0.05
 LAT_START = 48.025
 LON_START = -139.975
