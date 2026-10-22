@@ -1,6 +1,7 @@
 """A deliberately simple, temperature-only marine suitability lesson."""
 
 from pathlib import Path
+import re
 
 import pandas as pd
 
@@ -18,31 +19,57 @@ def load_temperature_grid(path: Path = GRID_PATH) -> pd.DataFrame:
     return grid
 
 
-def matched_occurrences(source: pd.DataFrame, grid: pd.DataFrame) -> pd.DataFrame:
-    required = (
-        "Latitude", "Longitude", "Genus - Full Name", "Species - Full Name",
-        "State - Full Name",
-    )
-    missing = [column for column in required if column not in source]
+def _field_tokens(column: str) -> list[str]:
+    separated = re.sub(r"([a-z])([A-Z])", r"\1 \2", str(column))
+    return re.findall(r"[a-z]+", separated.casefold())
+
+
+def _source_fields(
+    columns: pd.Index, labels: dict[str, str] | None = None
+) -> dict[str, str]:
+    selected = {}
+    for role in ("latitude", "longitude", "genus", "species", "state"):
+        matches = []
+        for column in columns:
+            names = (str(column), (labels or {}).get(str(column), ""))
+            for name in names:
+                tokens = _field_tokens(name)
+                if tokens[-1:] == [role] or tokens[-3:] == [role, "full", "name"]:
+                    matches.append(str(column))
+                    break
+        if len(matches) == 1:
+            selected[role] = matches[0]
+        elif len(matches) > 1:
+            raise ValueError(f"Occurrence dataset has ambiguous {role} fields")
+    missing = [role for role in ("latitude", "longitude", "genus", "species", "state") if role not in selected]
     if missing:
         raise ValueError("Occurrence dataset is missing fields: " + ", ".join(missing))
+    return selected
 
-    records = source.loc[source["State - Full Name"].eq("British Columbia"), list(required)].copy()
-    records["Latitude"] = pd.to_numeric(records["Latitude"], errors="coerce")
-    records["Longitude"] = pd.to_numeric(records["Longitude"], errors="coerce")
-    records = records.dropna(subset=["Latitude", "Longitude", "Genus - Full Name", "Species - Full Name"])
+
+def matched_occurrences(
+    source: pd.DataFrame, grid: pd.DataFrame, labels: dict[str, str] | None = None
+) -> pd.DataFrame:
+    fields = _source_fields(source.columns, labels)
+    records = source.loc[
+        source[fields["state"]].eq("British Columbia"), list(fields.values())
+    ].rename(columns={column: role for role, column in fields.items()}).copy()
+    records = records[["latitude", "longitude", "genus", "species"]]
+    records["latitude"] = pd.to_numeric(records["latitude"], errors="coerce")
+    records["longitude"] = pd.to_numeric(records["longitude"], errors="coerce")
+    records = records.dropna(subset=["latitude", "longitude", "genus", "species"])
     records = records.loc[
-        records["Latitude"].between(-90, 90)
-        & records["Longitude"].between(-180, 180)
-        & records["Genus - Full Name"].astype(str).str.strip().ne("")
-        & records["Species - Full Name"].astype(str).str.strip().ne("")
+        records["latitude"].between(-90, 90)
+        & records["longitude"].between(-180, 180)
+        & records["genus"].astype(str).str.strip().ne("")
+        & records["species"].astype(str).str.strip().ne("")
     ].copy()
     records["species"] = (
-        records["Genus - Full Name"].astype(str).str.strip()
-        + " " + records["Species - Full Name"].astype(str).str.strip()
+        records["genus"].astype(str).str.strip()
+        + " " + records["species"].astype(str).str.strip()
     )
-    records["lat_cell"] = ((records["Latitude"] - LAT_START) / CELL_SIZE).round().astype(int)
-    records["lon_cell"] = ((records["Longitude"] - LON_START) / CELL_SIZE).round().astype(int)
+    records["lat_cell"] = ((records["latitude"] - LAT_START) / CELL_SIZE).round().astype(int)
+    records["lon_cell"] = ((records["longitude"] - LON_START) / CELL_SIZE).round().astype(int)
     records = records.drop_duplicates(["species", "lat_cell", "lon_cell"])
     return records.merge(
         grid[["lat_cell", "lon_cell", "baseline_c", "ssp245_2050_c"]],

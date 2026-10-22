@@ -61,9 +61,14 @@ except Exception:
 try:
     records = matched_occurrences(occurrences, grid)
 except ValueError as error:
-    logger.exception("Algae occurrence dataset schema is incompatible")
-    st.error(str(error))
-    st.stop()
+    logger.warning("Checking collection field labels after a schema mismatch: %s", error)
+    try:
+        labels = dataset_client().column_labels("algae-sdm-occurrences")
+        records = matched_occurrences(occurrences, grid, labels)
+    except Exception:
+        logger.exception("Algae occurrence dataset schema is incompatible; columns=%s", list(occurrences.columns))
+        st.error("The algae occurrence dataset lacks the fields needed for this example. Check the frontend service logs.")
+        st.stop()
 except Exception:
     logger.exception("Algae occurrence dataset could not be matched to the marine grid")
     st.error("The algae occurrence dataset could not be matched to the marine grid. Check the frontend service logs.")

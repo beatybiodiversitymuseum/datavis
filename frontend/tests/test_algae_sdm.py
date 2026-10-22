@@ -36,6 +36,45 @@ def test_occurrences_match_ocean_cells_once_and_exclude_unmatched_records():
     assert matched["baseline_c"].dropna().tolist() == [10.0, 12.0]
 
 
+def test_occurrences_accept_saved_query_source_field_names():
+    grid = pd.DataFrame({
+        "lat_cell": [0], "lon_cell": [0],
+        "baseline_c": [10.0], "ssp245_2050_c": [11.0],
+    })
+    source = pd.DataFrame({
+        "1,10,2.locality.latitude1": [48.025],
+        "1,10,2.locality.longitude1": [-139.975],
+        "1,5.taxon.Genus.fullName": ["Fucus"],
+        "1,5.taxon.Species.fullName": ["gardneri"],
+        "1,10,2,3.geography.State.fullName": ["British Columbia"],
+    })
+
+    matched = matched_occurrences(source, grid)
+
+    assert matched["species"].tolist() == ["Fucus gardneri"]
+    assert matched["baseline_c"].tolist() == [10.0]
+
+
+def test_occurrences_can_use_collection_field_labels():
+    grid = pd.DataFrame({
+        "lat_cell": [0], "lon_cell": [0],
+        "baseline_c": [10.0], "ssp245_2050_c": [11.0],
+    })
+    source = pd.DataFrame({
+        "path.one": [48.025], "path.two": [-139.975],
+        "path.three": ["Fucus"], "path.four": ["gardneri"],
+        "path.five": ["British Columbia"],
+    })
+    labels = {
+        "path.one": "Locality › Latitude",
+        "path.two": "Locality › Longitude",
+        "path.three": "Taxon › Genus › Full Name",
+        "path.four": "Taxon › Species › Full Name",
+        "path.five": "Geography › State › Full Name",
+    }
+    assert matched_occurrences(source, grid, labels)["species"].tolist() == ["Fucus gardneri"]
+
+
 def test_temperature_envelope_requires_fifty_matched_cells():
     records = pd.DataFrame({"species": ["Fucus gardneri"] * 49, "baseline_c": range(49)})
     with pytest.raises(ValueError, match="50 distinct"):
