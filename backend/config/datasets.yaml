@@ -7,3 +7,8 @@ datasets:
     query_id: 685
     title: UBC Herbarium Algae
     description: Algae specimens, collectors, collection dates, and localities.
+  algae-sdm-occurrences:
+    enabled: true
+    query_id: 707
+    title: Algae species distribution teaching data
+    description: Reviewed algae taxonomy, locality, and coordinates for a marine climate teaching example.

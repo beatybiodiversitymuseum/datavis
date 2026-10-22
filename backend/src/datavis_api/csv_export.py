@@ -39,9 +39,16 @@ def query_columns(client, query_id: int) -> list[QueryColumn]:
 
 def write_query_csv(client, query_id: int, output: TextIO) -> None:
     headers = [column.header for column in query_columns(client, query_id)]
+    sensitive_index = next(
+        (index for index, header in enumerate(headers) if header.casefold() == "sensitive record"),
+        None,
+    )
     writer = csv.writer(output)
     writer.writerow(headers)
     for row in client.stored_query_rows(query_id):
         if len(row) != len(headers) + 1:
             raise ExportError("saved query row does not match its displayed fields")
+        sensitive_value = row[sensitive_index + 1] if sensitive_index is not None else None
+        if sensitive_value not in (None, "None") and str(sensitive_value).strip():
+            raise ExportError("saved query contains a sensitive record")
         writer.writerow("" if value is None or value == "None" else value for value in row[1:])

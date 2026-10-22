@@ -25,6 +25,32 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+st.title("UBC Herbarium Explorer")
+st.write(
+    "This worked example starts with the reviewed UBC Herbarium algae saved query. "
+    "Streamlit adds linked filters, live summaries, charts, a map, a table, and a "
+    "download—all from the query's displayed fields."
+)
+with st.expander("What comes from Specify, and what does Streamlit add?"):
+    specify_column, streamlit_column = st.columns(2)
+    with specify_column:
+        st.markdown("**Specify saved query**")
+        st.markdown(
+            "- Selects the algae specimen records\n"
+            "- Supplies catalog, date, collector, locality, and coordinate fields\n"
+            "- Remains the source of the data shown here"
+        )
+    with streamlit_column:
+        st.markdown("**Streamlit page**")
+        st.markdown(
+            "- Filters the returned rows interactively\n"
+            "- Recalculates metrics and charts\n"
+            "- Maps coordinates and downloads the filtered result"
+        )
+st.info(
+    "This dashboard currently represents the algae portion of the UBC Herbarium collection."
+)
+
 
 @st.cache_data(ttl=86400, show_spinner="Loading collection data…")
 def load_data() -> pd.DataFrame:
@@ -45,7 +71,8 @@ if df.empty:
     st.stop()
 
 st.sidebar.title("🌿 Herbarium Explorer")
-st.sidebar.markdown("### Filters")
+st.sidebar.caption("A worked example built from one reviewed Specify saved query")
+st.sidebar.markdown("### Filter the query result")
 
 collectors = sorted(df["full_name"].dropna().unique())
 countries = sorted(value for value in df["country"].unique() if value != "Unknown")
@@ -88,9 +115,6 @@ st.sidebar.caption(f"{len(filtered):,} specimens match the filters")
 st.sidebar.caption(f"📅 {with_date:,} have collection dates")
 st.sidebar.caption(f"📍 {with_coords:,} have coordinates")
 
-st.title("UBC Herbarium Explorer")
-st.info("This dashboard currently represents the algae portion of the UBC Herbarium collection.")
-
 total_collection = 102_862
 st.markdown(
     f"""<div style="background:#1f2e1f;border-radius:10px;padding:1.2rem 2rem;
@@ -113,6 +137,7 @@ if filtered.empty:
 
 st.markdown("---")
 st.subheader("Specimens per Collector")
+st.caption("The chart updates immediately when you change a filter in the sidebar.")
 collector_counts = filtered["full_name"].value_counts()
 if len(collector_counts) <= 5:
     top_collectors = len(collector_counts)
@@ -127,6 +152,7 @@ st.bar_chart(collector_counts.head(top_collectors), horizontal=True)
 
 st.markdown("---")
 st.subheader("Collection Activity")
+st.caption("Collection dates from the saved query are grouped by year.")
 dated = filtered.dropna(subset=["year"]).copy()
 if dated.empty:
     st.info("No dated specimens match the current filters.")
@@ -166,6 +192,7 @@ else:
 
 st.markdown("---")
 st.subheader("Geographic Distribution")
+st.caption("The map uses latitude and longitude fields returned by the saved query.")
 map_data = filtered.dropna(subset=["latitude", "longitude"])[
     ["latitude", "longitude"]
 ]
@@ -183,6 +210,7 @@ else:
 st.markdown("---")
 title_column, download_column = st.columns([6, 1])
 title_column.subheader("Specimen Records")
+title_column.caption("The table and download contain the rows matching your filters.")
 records = filtered[
     [
         "catalognumber",

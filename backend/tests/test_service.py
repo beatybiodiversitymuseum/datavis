@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from datavis_api.config import ConfigurationError, load_datasets
-from datavis_api.csv_export import query_columns, write_query_csv
+from datavis_api.csv_export import ExportError, query_columns, write_query_csv
 
 
 class Response:
@@ -74,6 +74,25 @@ def test_writes_more_than_one_hundred_thousand_rows():
     write_query_csv(LargeClient(), 42, output)
 
     assert output.lines == 100_002
+
+
+def test_rejects_a_populated_sensitive_record_field():
+    class SensitiveResponse(Response):
+        def json(self):
+            return {"fields": [
+                {"isdisplay": True, "position": 0, "stringid": "1.name"},
+                {"isdisplay": True, "position": 1, "stringid": "1.sensitive", "columnalias": "Sensitive Record"},
+            ]}
+
+    class SensitiveClient(Client):
+        def get(self, path):
+            return SensitiveResponse()
+
+        def stored_query_rows(self, query_id):
+            yield [101, "Oak", "flagged"]
+
+    with pytest.raises(ExportError, match="sensitive record"):
+        write_query_csv(SensitiveClient(), 42, io.StringIO())
 
 
 def test_dataset_registry_is_explicit_allowlist(tmp_path: Path):
