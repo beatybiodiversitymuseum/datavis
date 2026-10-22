@@ -14,14 +14,37 @@ from datavis.ui import apply_branding, dataset_client
 
 
 logger = logging.getLogger(__name__)
-st.set_page_config(page_title="Algae Climate Explorer", page_icon="🌊", layout="wide")
+st.set_page_config(page_title="Algae and Ocean Temperature", page_icon="🌊", layout="wide")
 apply_branding()
-st.title("Where does the ocean match this alga's observed temperatures?")
+st.title("Fucus gardneri and ocean temperature")
 st.write(
-    "Museum records show where this species was collected. We look up the sea "
-    "surface temperature at those locations, then color ocean cells whose "
-    "temperature falls in the same range. Compare today's map with a future "
-    "climate scenario."
+    "*Fucus gardneri* is a seaweed represented in the UBC Herbarium's specimen "
+    "collection. The collection data records where specimens were found along "
+    "the British Columbia coast. This page compares ocean temperatures at "
+    "those places with temperatures across the surrounding ocean."
+)
+locations_column, temperature_column = st.columns(2)
+with locations_column:
+    st.subheader("Where the seaweed locations come from")
+    st.write(
+        "A herbarium specimen is a preserved organism kept for study. Its "
+        "collection entry gives the species name and the place where it was "
+        "found. We use the coordinates of BC specimens identified as "
+        "*Fucus gardneri*. White rings on the first map mark the collection "
+        "areas used in this comparison."
+    )
+with temperature_column:
+    st.subheader("Where the temperatures come from")
+    st.write(
+        "Bio-ORACLE estimates average sea surface temperature across ocean "
+        "areas around BC. We use its 2010–2020 values at collection areas to "
+        "set a temperature range, then apply that range across the mapped "
+        "ocean in both 2010–2020 and 2050–2060. These are seawater estimates, "
+        "not measurements made when specimens were collected."
+    )
+st.info(
+    "The colors on the maps describe seawater temperature. They do not show "
+    "where this seaweed lives or where it will spread."
 )
 
 
@@ -91,14 +114,23 @@ if coverage.count() < 50:
     st.warning("There are too few *Fucus gardneri* locations with ocean temperature data for this comparison.")
     st.stop()
 
-st.subheader("Fucus gardneri")
-range_name = st.select_slider(
-    "How much of the observed temperature range should count as a match?",
-    options=("50%", "80%", "90%"),
-    value="80%",
-    help="The middle 80% omits the warmest 10% and coolest 10% of temperatures at the matched museum locations.",
+st.header("Temperatures near collected specimens")
+st.write(
+    "Collection areas do not all have the same seawater temperature. Choose "
+    "how much of their temperature variation to include in the comparison. "
+    "A narrow range produces fewer matches; a wider range produces more."
 )
-tail = {"50%": 0.25, "80%": 0.1, "90%": 0.05}[range_name]
+range_choice = st.radio(
+    "Temperature range",
+    options=("Narrow (middle 50%)", "Medium (middle 80%)", "Wide (middle 90%)"),
+    index=1,
+    horizontal=True,
+)
+tail, range_name = {
+    "Narrow (middle 50%)": (0.25, "50%"),
+    "Medium (middle 80%)": (0.1, "80%"),
+    "Wide (middle 90%)": (0.05, "90%"),
+}[range_choice]
 minimum, maximum, matched = temperature_envelope(records, species, tail)
 total_cells = int(coverage.size)
 training_locations = records.loc[
@@ -106,26 +138,36 @@ training_locations = records.loc[
     ["latitude", "longitude", "baseline_c"],
 ].copy()
 training_locations["temperature"] = training_locations["baseline_c"].round(1)
-training_locations["kind"] = "Museum record location"
+training_locations["kind"] = "Area with a Fucus gardneri collection"
 
 st.write(
-    f"**Step 1 · Learn from museum records.** {matched:,} distinct BC ocean cells "
-    f"with *Fucus gardneri* records have a matching temperature value. The middle "
-    f"{range_name} of those temperatures is **{minimum:.1f}–{maximum:.1f} °C**."
+    f"Of {total_cells:,} small map areas with BC *Fucus gardneri* collections, "
+    f"{matched:,} have an ocean temperature estimate. For those areas, the "
+    f"middle {range_name} of 2010–2020 temperatures is "
+    f"**{minimum:.1f} to {maximum:.1f} °C**. That is the temperature range "
+    "used to color both maps below."
 )
-st.caption(f"{total_cells - matched:,} additional record cells have no ocean temperature value and are left out. Multiple specimens in one cell count once.")
+st.caption(
+    f"The other {total_cells - matched:,} collection areas could not be paired "
+    "with an ocean temperature and are left out. When several specimens fall "
+    "in one small map area, that area counts once. Changing the control above "
+    "changes the temperature range; it does not change the specimen locations "
+    "or the climate data."
+)
 
 current = suitability(grid, minimum, maximum, "baseline_c")
 future = suitability(grid, minimum, maximum, "ssp245_2050_c")
+st.header("Compare ocean temperatures")
 st.write(
-    "**Step 2 · Compare the ocean.** Teal cells fall in that same temperature "
-    "range. Grey cells do not. White outlined circles on the present-day map "
-    "show the museum record locations used above."
+    "Each colored dot represents a small area of ocean around BC. Both maps "
+    "use the same temperature range shown above. The left map uses average "
+    "surface seawater temperature for 2010–2020. The right map uses projected "
+    "temperature for 2050–2060 under one possible future emissions scenario."
 )
 st.markdown(
-    '<span style="color:#168777">●</span> Temperature matches &nbsp;&nbsp; '
-    '<span style="color:#aeb9c0">●</span> Temperature outside range &nbsp;&nbsp; '
-    '<span style="color:#303838">◉</span> Museum record location (present map)',
+    '<span style="color:#168777">●</span> Water temperature falls inside the chosen range &nbsp;&nbsp; '
+    '<span style="color:#aeb9c0">●</span> Water is colder or warmer &nbsp;&nbsp; '
+    '<span style="color:#303838">◉</span> Collection area used to set the range (left map)',
     unsafe_allow_html=True,
 )
 
@@ -136,7 +178,7 @@ def show_map(mapped, column: str, title: str, show_records: bool = False):
         {True: [22, 135, 119, 175], False: [175, 185, 192, 95]}
     )
     mapped["temperature"] = mapped[column].round(1)
-    mapped["kind"] = "Ocean grid cell"
+    mapped["kind"] = "Area of ocean"
     layers = [
         pdk.Layer(
             "ScatterplotLayer",
@@ -171,28 +213,35 @@ def show_map(mapped, column: str, title: str, show_records: bool = False):
         ),
         use_container_width=True,
     )
-    st.caption(f"{mapped['suitable'].sum():,} of {len(mapped):,} mapped ocean cells match the temperature range.")
+    st.caption(
+        f"{mapped['suitable'].sum():,} of {len(mapped):,} ocean areas shown "
+        "have surface temperatures in the chosen range. This counts ocean "
+        "areas, not seaweed locations."
+    )
 
 
 left, right = st.columns(2)
 with left:
-    show_map(current, "baseline_c", "Present ocean · 2010–2020", show_records=True)
+    show_map(current, "baseline_c", "Average surface seawater · 2010–2020", show_records=True)
 with right:
-    show_map(future, "ssp245_2050_c", "Future ocean · 2050–2060 (SSP2-4.5)")
+    show_map(future, "ssp245_2050_c", "Projected surface seawater · 2050–2060")
 
 st.warning(
-    "These maps show a temperature match, not where the species will live. "
-    "They include offshore and adjacent waters; they do not account for "
-    "shoreline habitat, salinity, light, dispersal, or sampling bias."
+    "A temperature match is only one condition for this seaweed. The maps "
+    "include offshore and nearby waters, even where this coastal species "
+    "cannot live. They do not account for shoreline habitat, salinity, light, "
+    "or how the seaweed spreads."
 )
 with st.expander("Data and method"):
     st.write(
-        "Each map marker represents a 0.05° Bio-ORACLE ocean grid cell in a "
-        "rectangular study area around BC. We take the middle portion selected "
-        "above from present-day sea surface temperatures at matched museum "
-        "locations, then apply that fixed range to both maps."
+        "The map covers a rectangle around BC, including offshore and nearby "
+        "waters. Bio-ORACLE divides it into 0.05° ocean cells, each several "
+        "kilometres across. We use one 2010–2020 surface temperature per cell "
+        "containing a collection location. The selected middle portion of "
+        "those values sets a fixed temperature range for both maps."
     )
     st.caption(
         "Marine temperature: Bio-ORACLE v3 surface ocean temperature, baseline "
-        "2010–2020 and SSP2-4.5 2050–2060. Algae locations: UBC Herbarium specimen records."
+        "2010–2020 and SSP2-4.5 2050–2060. SSP2-4.5 is a future emissions "
+        "scenario. Algae locations: UBC Herbarium specimen collection data."
     )

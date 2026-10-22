@@ -18,3 +18,7 @@
 
 - A Streamlit page may run with `datavis` installed in `site-packages`, so do not locate runtime data relative to the source checkout. Put required assets under `frontend/src/datavis/`, include them in `frontend/pyproject.toml` package data, and resolve them relative to the installed module.
 - For a new packaged asset, build a frontend wheel and verify that it contains the asset and that code loaded from the extracted wheel can read it. A source-tree test alone does not establish that the deployed app can find the file.
+
+## Public-facing copy
+
+- Write for visitors using the app. Explain what the records, controls, and maps show. Do not call a page a teaching example, worked example, reviewed query, or Streamlit demonstration in the finished interface. Keep query IDs, deployment steps, service names, and troubleshooting details in operator documentation and logs rather than visitor-facing errors.
